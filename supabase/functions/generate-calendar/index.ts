@@ -23,6 +23,11 @@ serve(async (req) => {
     }
 
     console.log('Generating calendar for niches:', niches);
+    console.log('Using OpenAI API Key:', openAIApiKey ? 'Present' : 'Missing');
+
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key is not configured');
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -35,7 +40,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a helpful assistant that generates seasonal marketing calendars for businesses in Brazil. You focus on Brazilian market dates and opportunities.'
+            content: 'You are a helpful assistant that generates seasonal marketing calendars for businesses in Brazil. You focus on Brazilian market dates and opportunities. Always respond with valid JSON arrays.'
           },
           { 
             role: 'user', 
@@ -47,19 +52,30 @@ serve(async (req) => {
             - A brief description of why it's important for the business
             
             Format the response as a JSON array of objects with these exact keys: date, title, category, description.
-            Include at least 5 dates per niche, focusing on Brazilian holidays and commemorative dates.`
+            Include at least 5 dates per niche, focusing on Brazilian holidays and commemorative dates.
+            
+            Example of expected format:
+            [
+              {
+                "date": "2024-12-25",
+                "title": "Natal",
+                "category": "holiday",
+                "description": "Uma das principais datas comemorativas para vendas no varejo."
+              }
+            ]`
           }
         ],
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', await response.text());
-      throw new Error('Failed to generate calendar dates');
+      const errorText = await response.text();
+      console.error('OpenAI API error response:', errorText);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI response received:', data);
+    console.log('OpenAI response structure:', JSON.stringify(data, null, 2));
 
     if (!data.choices || !data.choices[0] || !data.choices[0].message) {
       console.error('Invalid OpenAI response format:', data);
@@ -73,7 +89,19 @@ serve(async (req) => {
       const dates = JSON.parse(generatedText);
       
       if (!Array.isArray(dates)) {
+        console.error('Generated content is not an array:', dates);
         throw new Error('Generated content is not an array');
+      }
+
+      // Validate the structure of each date object
+      const isValidDate = (date: any) => {
+        return date.date && date.title && date.category && date.description &&
+               ['commemorative', 'holiday', 'optional'].includes(date.category);
+      };
+
+      if (!dates.every(isValidDate)) {
+        console.error('Invalid date object structure detected:', dates);
+        throw new Error('Invalid date object structure');
       }
 
       return new Response(JSON.stringify({ dates }), {
