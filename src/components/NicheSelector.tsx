@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Check } from "lucide-react";
+import { Check, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import {
   Command,
   CommandEmpty,
@@ -21,11 +22,22 @@ const niches = [
   { value: "fashion", label: "Moda" },
   { value: "beauty", label: "Beleza" },
   { value: "tech", label: "Tecnologia" },
+  { value: "health", label: "Saúde e Bem-estar" },
+  { value: "education", label: "Educação" },
+  { value: "pets", label: "Pets" },
+  { value: "sports", label: "Esportes" },
+  { value: "home", label: "Casa e Decoração" },
+  { value: "automotive", label: "Automotivo" },
+  { value: "books", label: "Livraria" },
+  { value: "games", label: "Games" },
+  { value: "toys", label: "Brinquedos" },
+  { value: "jewelry", label: "Joias e Acessórios" }
 ];
 
 export const NicheSelector = () => {
   const [open, setOpen] = useState(false);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
+  const navigate = useNavigate();
 
   const toggleNiche = (value: string) => {
     setSelectedNiches((current) =>
@@ -35,8 +47,15 @@ export const NicheSelector = () => {
     );
   };
 
+  const handleGenerateCalendar = () => {
+    if (selectedNiches.length === 0) {
+      return;
+    }
+    navigate("/calendar", { state: { selectedNiches } });
+  };
+
   return (
-    <div className="w-full max-w-sm">
+    <div className="flex flex-col gap-6 w-full max-w-sm">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -83,6 +102,15 @@ export const NicheSelector = () => {
           </Command>
         </PopoverContent>
       </Popover>
+
+      <Button
+        onClick={handleGenerateCalendar}
+        disabled={selectedNiches.length === 0}
+        className="w-full"
+      >
+        <Calendar className="mr-2" />
+        Gerar Calendário
+      </Button>
     </div>
   );
 };
