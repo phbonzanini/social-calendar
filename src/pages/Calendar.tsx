@@ -14,12 +14,27 @@ interface CalendarDate {
 }
 
 const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> => {
-  const { data, error } = await supabase.functions.invoke('generate-calendar', {
-    body: { niches }
-  });
+  console.log('Fetching dates for niches:', niches);
+  
+  const { data, error } = await supabase
+    .from('dastas_2025')
+    .select('*')
+    .contains('niches', niches);
 
-  if (error) throw error;
-  return data.dates;
+  if (error) {
+    console.error('Error fetching dates:', error);
+    throw error;
+  }
+
+  console.log('Fetched data:', data);
+
+  // Transform the data to match our CalendarDate interface
+  return data.map(item => ({
+    date: item.data,
+    title: item.descrição,
+    category: item.tipo as "commemorative" | "holiday" | "optional",
+    description: item.descrição
+  }));
 };
 
 const Calendar = () => {
@@ -33,8 +48,8 @@ const Calendar = () => {
     meta: {
       onError: () => {
         toast({
-          title: "Erro ao gerar calendário",
-          description: "Não foi possível gerar o calendário. Tente novamente mais tarde.",
+          title: "Erro ao carregar datas",
+          description: "Não foi possível carregar as datas do calendário. Tente novamente mais tarde.",
           variant: "destructive",
         });
       }

@@ -37,6 +37,7 @@ export type Database = {
           descrição: string | null
           id: number
           needs_review: boolean | null
+          niches: string[] | null
           tipo: string | null
         }
         Insert: {
@@ -45,6 +46,7 @@ export type Database = {
           descrição?: string | null
           id?: number
           needs_review?: boolean | null
+          niches?: string[] | null
           tipo?: string | null
         }
         Update: {
@@ -53,6 +55,7 @@ export type Database = {
           descrição?: string | null
           id?: number
           needs_review?: boolean | null
+          niches?: string[] | null
           tipo?: string | null
         }
         Relationships: []
