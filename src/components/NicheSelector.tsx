@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,6 +7,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -55,29 +55,31 @@ export const NicheSelector = () => {
         <PopoverContent className="w-full p-0">
           <Command>
             <CommandInput placeholder="Procurar nicho..." className="h-9" />
-            <CommandEmpty>Nenhum nicho encontrado.</CommandEmpty>
-            <CommandGroup>
-              {niches.map((niche) => (
-                <CommandItem
-                  key={niche.value}
-                  onSelect={() => toggleNiche(niche.value)}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <div
-                    className={`w-4 h-4 border rounded-sm flex items-center justify-center ${
-                      selectedNiches.includes(niche.value)
-                        ? "bg-primary border-primary"
-                        : "border-neutral"
-                    }`}
+            <CommandList>
+              <CommandEmpty>Nenhum nicho encontrado.</CommandEmpty>
+              <CommandGroup>
+                {niches.map((niche) => (
+                  <CommandItem
+                    key={niche.value}
+                    onSelect={() => toggleNiche(niche.value)}
+                    className="flex items-center gap-2 cursor-pointer"
                   >
-                    {selectedNiches.includes(niche.value) && (
-                      <Check className="h-3 w-3 text-white" />
-                    )}
-                  </div>
-                  {niche.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+                    <div
+                      className={`w-4 h-4 border rounded-sm flex items-center justify-center ${
+                        selectedNiches.includes(niche.value)
+                          ? "bg-primary border-primary"
+                          : "border-neutral"
+                      }`}
+                    >
+                      {selectedNiches.includes(niche.value) && (
+                        <Check className="h-3 w-3 text-white" />
+                      )}
+                    </div>
+                    {niche.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
