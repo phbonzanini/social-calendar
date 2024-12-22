@@ -20,11 +20,12 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
   console.log('Buscando datas para os nichos:', niches);
   
-  // Modificando a query para usar overlap ao invés de contains
+  // Primeiro, vamos buscar todas as datas que têm pelo menos um dos nichos selecionados
   const { data, error } = await supabase
     .from('dastas_2025')
     .select('*')
-    .overlaps('niches', niches);
+    .overlaps('niches', niches)
+    .order('data');
 
   if (error) {
     console.error('Erro ao buscar datas:', error);
@@ -38,6 +39,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
   console.log('Dados obtidos:', data);
 
+  // Transformar os dados para o formato esperado
   return data.map(item => ({
     date: item.data,
     title: item.descrição,
@@ -102,7 +104,7 @@ const Calendar = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {dates.map((date, index) => (
             <motion.div
-              key={index}
+              key={`${date.date}-${index}`}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: index * 0.1 }}
