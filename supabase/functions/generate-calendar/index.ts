@@ -9,22 +9,20 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { niches } = await req.json();
-
-    const prompt = `Generate a list of important seasonal dates for the following business niches: ${niches.join(', ')}. 
-    For each date, provide:
-    - The date (in YYYY-MM-DD format)
-    - A title
-    - A category (either "commemorative", "holiday", or "optional")
-    - A brief description of why it's important for the business
     
-    Format the response as a JSON array of objects with these exact keys: date, title, category, description.
-    Include at least 5 dates per niche, focusing on Brazilian holidays and commemorative dates.`;
+    if (!niches || !Array.isArray(niches) || niches.length === 0) {
+      console.error('Invalid or empty niches array received:', niches);
+      throw new Error('Invalid niches provided');
+    }
+
+    console.log('Generating calendar for niches:', niches);
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -37,27 +35,66 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a helpful assistant that generates seasonal marketing calendars for businesses. You focus on Brazilian market dates and opportunities.'
+            content: 'You are a helpful assistant that generates seasonal marketing calendars for businesses in Brazil. You focus on Brazilian market dates and opportunities.'
           },
-          { role: 'user', content: prompt }
+          { 
+            role: 'user', 
+            content: `Generate a list of important seasonal dates for the following business niches: ${niches.join(', ')}. 
+            For each date, provide:
+            - The date (in YYYY-MM-DD format)
+            - A title
+            - A category (either "commemorative", "holiday", or "optional")
+            - A brief description of why it's important for the business
+            
+            Format the response as a JSON array of objects with these exact keys: date, title, category, description.
+            Include at least 5 dates per niche, focusing on Brazilian holidays and commemorative dates.`
+          }
         ],
       }),
     });
 
-    const data = await response.json();
-    const generatedText = data.choices[0].message.content;
-    
-    // Parse the JSON string from the response
-    const dates = JSON.parse(generatedText);
+    if (!response.ok) {
+      console.error('OpenAI API error:', await response.text());
+      throw new Error('Failed to generate calendar dates');
+    }
 
-    return new Response(JSON.stringify({ dates }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    const data = await response.json();
+    console.log('OpenAI response received:', data);
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      console.error('Invalid OpenAI response format:', data);
+      throw new Error('Invalid response format from AI');
+    }
+
+    const generatedText = data.choices[0].message.content;
+    console.log('Generated text:', generatedText);
+
+    try {
+      const dates = JSON.parse(generatedText);
+      
+      if (!Array.isArray(dates)) {
+        throw new Error('Generated content is not an array');
+      }
+
+      return new Response(JSON.stringify({ dates }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError);
+      throw new Error('Failed to parse AI response');
+    }
+
   } catch (error) {
     console.error('Error in generate-calendar function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ 
+        error: error.message,
+        details: 'If this error persists, please try again with different niches or contact support.'
+      }), 
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
   }
 });
