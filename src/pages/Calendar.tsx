@@ -20,10 +20,11 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
   console.log('Buscando datas para os nichos:', niches);
   
+  // Modificando a query para usar overlap ao invés de contains
   const { data, error } = await supabase
     .from('dastas_2025')
     .select('*')
-    .contains('niches', niches);
+    .overlaps('niches', niches);
 
   if (error) {
     console.error('Erro ao buscar datas:', error);
