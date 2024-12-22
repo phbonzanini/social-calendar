@@ -14,7 +14,11 @@ interface CalendarDate {
 }
 
 const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> => {
-  console.log('Fetching dates for niches:', niches);
+  if (!niches || niches.length === 0) {
+    throw new Error("Nenhum nicho selecionado");
+  }
+
+  console.log('Buscando datas para os nichos:', niches);
   
   const { data, error } = await supabase
     .from('dastas_2025')
@@ -22,13 +26,17 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
     .contains('niches', niches);
 
   if (error) {
-    console.error('Error fetching dates:', error);
+    console.error('Erro ao buscar datas:', error);
     throw error;
   }
 
-  console.log('Fetched data:', data);
+  if (!data || data.length === 0) {
+    console.log('Nenhuma data encontrada para os nichos selecionados');
+    return [];
+  }
 
-  // Transform the data to match our CalendarDate interface
+  console.log('Dados obtidos:', data);
+
   return data.map(item => ({
     date: item.data,
     title: item.descrição,
@@ -72,6 +80,14 @@ const Calendar = () => {
     );
   }
 
+  if (!dates || dates.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-neutral-dark">Nenhuma data encontrada para os nichos selecionados.</p>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -83,14 +99,14 @@ const Calendar = () => {
           Seu Calendário Personalizado
         </h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {dates?.map((date, index) => (
+          {dates.map((date, index) => (
             <motion.div
               key={index}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className="h-full">
+              <Card className="h-full hover:shadow-lg transition-shadow">
                 <CardHeader>
                   <CardTitle className="text-lg">
                     {date.title}
