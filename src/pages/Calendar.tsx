@@ -30,14 +30,15 @@ const Calendar = () => {
   const { data: dates, isLoading, error } = useQuery({
     queryKey: ["calendar-dates", selectedNiches],
     queryFn: () => fetchDatesForNiches(selectedNiches),
-    onError: (error) => {
-      toast({
-        title: "Erro ao gerar calendário",
-        description: "Não foi possível gerar o calendário. Tente novamente mais tarde.",
-        variant: "destructive",
-      });
-      console.error("Error fetching dates:", error);
-    },
+    meta: {
+      onError: () => {
+        toast({
+          title: "Erro ao gerar calendário",
+          description: "Não foi possível gerar o calendário. Tente novamente mais tarde.",
+          variant: "destructive",
+        });
+      }
+    }
   });
 
   if (isLoading) {
