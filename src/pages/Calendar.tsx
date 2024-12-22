@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
 
 interface CalendarDate {
   date: string;
@@ -12,37 +14,44 @@ interface CalendarDate {
 }
 
 const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> => {
-  // Aqui implementaremos a chamada para a API do OpenAI
-  // Por enquanto, retornamos dados mockados
-  return [
-    {
-      date: "2024-05-12",
-      title: "Dia das Mães",
-      category: "commemorative",
-      description: "Uma das datas mais importantes para o comércio"
-    },
-    {
-      date: "2024-06-12",
-      title: "Dia dos Namorados",
-      category: "commemorative",
-      description: "Excelente para campanhas promocionais"
-    }
-  ];
+  const { data, error } = await supabase.functions.invoke('generate-calendar', {
+    body: { niches }
+  });
+
+  if (error) throw error;
+  return data.dates;
 };
 
 const Calendar = () => {
   const location = useLocation();
+  const { toast } = useToast();
   const selectedNiches = location.state?.selectedNiches || [];
 
-  const { data: dates, isLoading } = useQuery({
+  const { data: dates, isLoading, error } = useQuery({
     queryKey: ["calendar-dates", selectedNiches],
     queryFn: () => fetchDatesForNiches(selectedNiches),
+    onError: (error) => {
+      toast({
+        title: "Erro ao gerar calendário",
+        description: "Não foi possível gerar o calendário. Tente novamente mais tarde.",
+        variant: "destructive",
+      });
+      console.error("Error fetching dates:", error);
+    },
   });
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-red-500">Erro ao carregar o calendário. Tente novamente.</p>
       </div>
     );
   }
@@ -65,7 +74,7 @@ const Calendar = () => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card>
+              <Card className="h-full">
                 <CardHeader>
                   <CardTitle className="text-lg">
                     {date.title}
@@ -75,6 +84,16 @@ const Calendar = () => {
                   <p className="text-sm text-muted-foreground mb-2">
                     {new Date(date.date).toLocaleDateString('pt-BR')}
                   </p>
+                  <div className="mb-2">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                      date.category === 'commemorative' ? 'bg-blue-100 text-blue-800' :
+                      date.category === 'holiday' ? 'bg-red-100 text-red-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {date.category === 'commemorative' ? 'Comemorativa' :
+                       date.category === 'holiday' ? 'Feriado' : 'Opcional'}
+                    </span>
+                  </div>
                   <p className="text-sm">{date.description}</p>
                 </CardContent>
               </Card>
