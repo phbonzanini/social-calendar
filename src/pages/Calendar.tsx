@@ -136,7 +136,7 @@ const Calendar = () => {
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className="h-full hover:shadow-lg transition-shadow">
+              <Card className="h-full hover:shadow-lg transition-shadow bg-white/90 backdrop-blur-sm">
                 <CardHeader>
                   <CardTitle className="text-lg">
                     {date.title}
@@ -147,16 +147,15 @@ const Calendar = () => {
                     {new Date(date.date).toLocaleDateString('pt-BR')}
                   </p>
                   <div className="mb-2">
-                    <span className={`inline-block px-2 py-1 rounded-full text-xs ${
-                      date.category === 'commemorative' ? 'bg-blue-100 text-blue-800' :
-                      date.category === 'holiday' ? 'bg-red-100 text-red-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {date.category === 'commemorative' ? 'Comemorativa' :
-                       date.category === 'holiday' ? 'Feriado' : 'Opcional'}
-                    </span>
+                    {date.category !== 'optional' && (
+                      <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                        date.category === 'commemorative' ? 'bg-blue-100 text-blue-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {date.category === 'commemorative' ? 'Comemorativa' : 'Feriado'}
+                      </span>
+                    )}
                   </div>
-                  <p className="text-sm">{date.description}</p>
                 </CardContent>
               </Card>
             </motion.div>
