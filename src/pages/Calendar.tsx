@@ -20,32 +20,56 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
   console.log('Buscando datas para os nichos:', niches);
   
-  // Primeiro, vamos buscar todas as datas que têm pelo menos um dos nichos selecionados
-  const { data, error } = await supabase
-    .from('dastas_2025')
-    .select('*')
-    .overlaps('niches', niches)
-    .order('data');
+  try {
+    // Primeiro tentar usar a busca inteligente com GPT
+    const response = await fetch('/functions/v1/search-dates', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ niches }),
+    });
 
-  if (error) {
+    if (!response.ok) {
+      throw new Error('Falha ao buscar datas com GPT');
+    }
+
+    const { dates } = await response.json();
+    
+    if (!dates || dates.length === 0) {
+      console.log('Nenhuma data encontrada via GPT, usando busca padrão');
+      // Fallback para busca padrão se o GPT não retornar resultados
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('dastas_2025')
+        .select('*')
+        .overlaps('niches', niches)
+        .order('data');
+
+      if (fallbackError) throw fallbackError;
+      if (!fallbackData || fallbackData.length === 0) {
+        console.log('Nenhuma data encontrada na busca padrão');
+        return [];
+      }
+
+      return fallbackData.map(item => ({
+        date: item.data,
+        title: item.descrição,
+        category: item.tipo as "commemorative" | "holiday" | "optional",
+        description: item.descrição
+      }));
+    }
+
+    return dates.map(item => ({
+      date: item.data,
+      title: item.descrição,
+      category: item.tipo as "commemorative" | "holiday" | "optional",
+      description: item.descrição
+    }));
+  } catch (error) {
     console.error('Erro ao buscar datas:', error);
     throw error;
   }
-
-  if (!data || data.length === 0) {
-    console.log('Nenhuma data encontrada para os nichos selecionados');
-    return [];
-  }
-
-  console.log('Dados obtidos:', data);
-
-  // Transformar os dados para o formato esperado
-  return data.map(item => ({
-    date: item.data,
-    title: item.descrição,
-    category: item.tipo as "commemorative" | "holiday" | "optional",
-    description: item.descrição
-  }));
 };
 
 const Calendar = () => {

@@ -62,27 +62,7 @@ export type Database = {
       }
     }
     Views: {
-      datas_suspeitas: {
-        Row: {
-          data: string | null
-          descrição: string | null
-          id: number | null
-          tipo: string | null
-        }
-        Insert: {
-          data?: string | null
-          descrição?: string | null
-          id?: number | null
-          tipo?: string | null
-        }
-        Update: {
-          data?: string | null
-          descrição?: string | null
-          id?: number | null
-          tipo?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       [_ in never]: never
