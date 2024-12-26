@@ -16,7 +16,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-const niches = [
+export const niches = [
   { value: "ecommerce", label: "E-commerce" },
   { value: "food", label: "Alimentação" },
   { value: "fashion", label: "Moda" },
