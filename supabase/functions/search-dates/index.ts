@@ -18,30 +18,44 @@ serve(async (req) => {
 
   try {
     const { niches } = await req.json();
+    console.log('Received niches:', niches);
     
-    // Criar cliente Supabase com service role key para acesso total
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Primeiro, buscar todas as datas do banco
+    // Buscar todas as datas do banco
     const { data: allDates, error: dbError } = await supabase
       .from('dastas_2025')
       .select('*')
       .order('data');
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      console.error('Database error:', dbError);
+      throw dbError;
+    }
+
+    if (!allDates || allDates.length === 0) {
+      console.log('No dates found in database');
+      return new Response(JSON.stringify({ dates: [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log('Found dates in database:', allDates.length);
 
     // Preparar o prompt para o GPT
     const prompt = `
-      Analise estas datas comemorativas e me ajude a identificar quais são mais relevantes para os seguintes nichos: ${niches.join(', ')}.
+      Analise estas datas comemorativas e identifique quais são mais relevantes para os seguintes nichos de negócio: ${niches.join(', ')}.
       
       Datas disponíveis:
-      ${allDates.map(d => `- ${d.data}: ${d.descrição} (${d.tipo})`).join('\n')}
+      ${allDates.map(d => `${d.id}. ${d.data}: ${d.descrição} (${d.tipo})`).join('\n')}
       
-      Por favor, retorne apenas os IDs das datas mais relevantes separados por vírgula.
-      Exemplo de resposta: 1,4,7,12
+      Retorne apenas os IDs das datas mais relevantes separados por vírgula.
+      Exemplo: 1,4,7,12
       
       Responda APENAS com os números, sem texto adicional.
     `;
+
+    console.log('Sending request to GPT');
 
     // Consultar o GPT
     const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -53,17 +67,37 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: 'system', content: 'Você é um assistente especializado em identificar datas comemorativas relevantes para diferentes nichos de negócio.' },
+          { 
+            role: 'system', 
+            content: 'Você é um assistente especializado em identificar datas comemorativas relevantes para diferentes nichos de negócio. Responda apenas com os IDs das datas relevantes.' 
+          },
           { role: 'user', content: prompt }
         ],
+        temperature: 0.7,
       }),
     });
 
+    if (!gptResponse.ok) {
+      console.error('GPT API error:', await gptResponse.text());
+      throw new Error('Failed to get response from GPT');
+    }
+
     const gptData = await gptResponse.json();
+    console.log('GPT response:', gptData);
+
     const relevantIds = gptData.choices[0].message.content
       .split(',')
       .map(id => parseInt(id.trim()))
       .filter(id => !isNaN(id));
+
+    console.log('Relevant IDs:', relevantIds);
+
+    if (relevantIds.length === 0) {
+      console.log('No relevant dates found by GPT');
+      return new Response(JSON.stringify({ dates: [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Buscar as datas relevantes
     const { data: relevantDates, error: finalError } = await supabase
@@ -72,13 +106,18 @@ serve(async (req) => {
       .in('id', relevantIds)
       .order('data');
 
-    if (finalError) throw finalError;
+    if (finalError) {
+      console.error('Error fetching relevant dates:', finalError);
+      throw finalError;
+    }
+
+    console.log('Returning relevant dates:', relevantDates?.length);
 
     return new Response(JSON.stringify({ dates: relevantDates }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
-    console.error('Erro na função search-dates:', error);
+    console.error('Error in search-dates function:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

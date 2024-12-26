@@ -21,38 +21,20 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log('Buscando datas para os nichos:', niches);
   
   try {
-    // Primeiro tentar usar a busca inteligente com GPT
-    const response = await fetch('/functions/v1/search-dates', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ niches }),
+    // Tentar usar a busca com GPT primeiro
+    const { data: gptResponse, error: gptError } = await supabase.functions.invoke('search-dates', {
+      body: { niches },
     });
 
-    if (!response.ok) {
-      throw new Error('Falha ao buscar datas com GPT');
+    if (gptError) {
+      console.error('Erro na busca com GPT:', gptError);
+      throw gptError;
     }
 
-    const { dates } = await response.json();
-    
-    if (!dates || dates.length === 0) {
-      console.log('Nenhuma data encontrada via GPT, usando busca padrão');
-      // Fallback para busca padrão se o GPT não retornar resultados
-      const { data: fallbackData, error: fallbackError } = await supabase
-        .from('dastas_2025')
-        .select('*')
-        .overlaps('niches', niches)
-        .order('data');
+    console.log('Resposta da busca com GPT:', gptResponse);
 
-      if (fallbackError) throw fallbackError;
-      if (!fallbackData || fallbackData.length === 0) {
-        console.log('Nenhuma data encontrada na busca padrão');
-        return [];
-      }
-
-      return fallbackData.map(item => ({
+    if (gptResponse?.dates && gptResponse.dates.length > 0) {
+      return gptResponse.dates.map(item => ({
         date: item.data,
         title: item.descrição,
         category: item.tipo as "commemorative" | "holiday" | "optional",
@@ -60,7 +42,28 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       }));
     }
 
-    return dates.map(item => ({
+    console.log('Nenhuma data encontrada via GPT, usando busca padrão');
+    
+    // Fallback para busca padrão
+    const { data: fallbackData, error: fallbackError } = await supabase
+      .from('dastas_2025')
+      .select('*')
+      .overlaps('niches', niches)
+      .order('data');
+
+    if (fallbackError) {
+      console.error('Erro na busca padrão:', fallbackError);
+      throw fallbackError;
+    }
+
+    if (!fallbackData || fallbackData.length === 0) {
+      console.log('Nenhuma data encontrada na busca padrão');
+      return [];
+    }
+
+    console.log('Datas encontradas na busca padrão:', fallbackData.length);
+
+    return fallbackData.map(item => ({
       date: item.data,
       title: item.descrição,
       category: item.tipo as "commemorative" | "holiday" | "optional",
