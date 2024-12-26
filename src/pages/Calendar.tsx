@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { niches } from "@/components/NicheSelector";
 
 interface CalendarDate {
   date: string;
@@ -94,6 +95,26 @@ const Calendar = () => {
     }
   });
 
+  // Helper function to get niche label from value
+  const getNicheLabel = (value: string) => {
+    const niche = niches.find(n => n.value === value);
+    return niche ? niche.label : value;
+  };
+
+  // Helper function to get date type label
+  const getDateTypeLabel = (category: string) => {
+    switch (category) {
+      case 'commemorative':
+        return 'Data Comemorativa';
+      case 'holiday':
+        return 'Feriado Nacional';
+      case 'optional':
+        return 'Ponto Facultativo';
+      default:
+        return '';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -125,9 +146,19 @@ const Calendar = () => {
       className="min-h-screen p-6 bg-gradient-to-br from-primary-light via-white to-neutral-light"
     >
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-neutral-dark mb-6">
+        <h1 className="text-3xl font-bold text-neutral-dark mb-2">
           Seu Calendário Personalizado
         </h1>
+        <div className="flex flex-wrap gap-2 mb-6">
+          {selectedNiches.map((niche: string) => (
+            <span
+              key={niche}
+              className="inline-block px-3 py-1 bg-primary/10 text-primary-dark rounded-full text-sm"
+            >
+              {getNicheLabel(niche)}
+            </span>
+          ))}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {dates.map((date, index) => (
             <motion.div
@@ -152,7 +183,7 @@ const Calendar = () => {
                         date.category === 'commemorative' ? 'bg-blue-100 text-blue-800' :
                         'bg-red-100 text-red-800'
                       }`}>
-                        {date.category === 'commemorative' ? 'Comemorativa' : 'Feriado'}
+                        {getDateTypeLabel(date.category)}
                       </span>
                     )}
                   </div>
