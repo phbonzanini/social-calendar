@@ -2,10 +2,12 @@ import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, FileDown, FileSpreadsheet } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { niches } from "@/components/NicheSelector";
+import jsPDF from 'jspdf';
 
 interface CalendarDate {
   date: string;
@@ -111,6 +113,75 @@ const Calendar = () => {
     }
   };
 
+  const exportToPDF = () => {
+    if (!dates || dates.length === 0) return;
+
+    const pdf = new jsPDF();
+    let yPosition = 20;
+
+    // Add title
+    pdf.setFontSize(16);
+    pdf.text('Calendário Personalizado', 20, yPosition);
+    yPosition += 10;
+
+    // Add selected niches
+    pdf.setFontSize(12);
+    const nichesText = selectedNiches.map(niche => getNicheLabel(niche)).join(', ');
+    pdf.text(`Nichos selecionados: ${nichesText}`, 20, yPosition);
+    yPosition += 15;
+
+    // Add dates
+    pdf.setFontSize(10);
+    dates.forEach((date) => {
+      const dateStr = new Date(date.date).toLocaleDateString('pt-BR');
+      const typeStr = getDateTypeLabel(date.category);
+      
+      if (yPosition > 270) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+
+      pdf.text(`${dateStr} - ${typeStr}`, 20, yPosition);
+      yPosition += 7;
+      pdf.text(date.title, 30, yPosition);
+      yPosition += 10;
+    });
+
+    pdf.save('calendario-personalizado.pdf');
+    
+    toast({
+      title: "PDF gerado com sucesso",
+      description: "O arquivo foi baixado para o seu computador.",
+    });
+  };
+
+  const exportToCSV = () => {
+    if (!dates || dates.length === 0) return;
+
+    const headers = ['Data', 'Tipo', 'Descrição'];
+    const csvContent = dates.map(date => {
+      const dateStr = new Date(date.date).toLocaleDateString('pt-BR');
+      const typeStr = getDateTypeLabel(date.category);
+      return `${dateStr},"${typeStr}","${date.title}"`;
+    });
+
+    const csv = [headers.join(','), ...csvContent].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'calendario-personalizado.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "CSV gerado com sucesso",
+      description: "O arquivo foi baixado para o seu computador.",
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -142,18 +213,40 @@ const Calendar = () => {
       className="min-h-screen p-6 bg-gradient-to-br from-primary-light via-white to-neutral-light"
     >
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-neutral-dark mb-2">
-          Seu Calendário Personalizado
-        </h1>
-        <div className="flex flex-wrap gap-2 mb-6">
-          {selectedNiches.map((niche: string) => (
-            <span
-              key={niche}
-              className="inline-block px-3 py-1 bg-primary/10 text-primary-dark rounded-full text-sm"
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-neutral-dark mb-2">
+              Seu Calendário Personalizado
+            </h1>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {selectedNiches.map((niche: string) => (
+                <span
+                  key={niche}
+                  className="inline-block px-3 py-1 bg-primary/10 text-primary-dark rounded-full text-sm"
+                >
+                  {getNicheLabel(niche)}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={exportToPDF}
+              variant="outline"
+              className="flex items-center gap-2"
             >
-              {getNicheLabel(niche)}
-            </span>
-          ))}
+              <FileDown className="h-4 w-4" />
+              PDF
+            </Button>
+            <Button
+              onClick={exportToCSV}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              CSV
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {dates.map((date, index) => (
