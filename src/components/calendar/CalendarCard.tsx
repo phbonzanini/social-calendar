@@ -47,7 +47,10 @@ const addToGoogleCalendar = (date: CalendarDate) => {
   const endDate = new Date(eventDate);
   endDate.setDate(endDate.getDate() + 1);
 
-  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+  // Format dates to YYYYMMDD format required by Google Calendar
+  const formatDate = (date: Date) => {
+    return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
+  };
 
   const params = new URLSearchParams({
     action: 'TEMPLATE',
