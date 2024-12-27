@@ -44,9 +44,7 @@ const getDateTypeStyle = (category: string) => {
 
 const addToGoogleCalendar = (date: CalendarDate) => {
   const eventDate = new Date(date.date);
-  const endDate = new Date(eventDate);
-  endDate.setDate(endDate.getDate() + 1);
-
+  
   // Format dates to YYYYMMDD format required by Google Calendar
   const formatDate = (date: Date) => {
     return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
@@ -55,7 +53,7 @@ const addToGoogleCalendar = (date: CalendarDate) => {
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: date.title,
-    dates: `${formatDate(eventDate)}/${formatDate(endDate)}`,
+    dates: `${formatDate(eventDate)}/${formatDate(eventDate)}`,
     details: `${getDateTypeLabel(date.category)} - ${date.description}`,
   });
 
