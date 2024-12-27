@@ -1,16 +1,19 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CalendarPlus } from "lucide-react";
 import { motion } from "framer-motion";
-
-interface CalendarCardProps {
-  date: CalendarDate;
-  index: number;
-}
+import { useToast } from "@/components/ui/use-toast";
 
 interface CalendarDate {
   date: string;
   title: string;
   category: "commemorative" | "holiday" | "optional";
   description: string;
+}
+
+interface CalendarCardProps {
+  date: CalendarDate;
+  index: number;
 }
 
 const getDateTypeLabel = (category: string) => {
@@ -39,7 +42,34 @@ const getDateTypeStyle = (category: string) => {
   }
 };
 
+const addToGoogleCalendar = (date: CalendarDate) => {
+  const eventDate = new Date(date.date);
+  const endDate = new Date(eventDate);
+  endDate.setDate(endDate.getDate() + 1);
+
+  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: date.title,
+    dates: `${formatDate(eventDate)}/${formatDate(endDate)}`,
+    details: `${getDateTypeLabel(date.category)} - ${date.description}`,
+  });
+
+  window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank');
+};
+
 export const CalendarCard = ({ date, index }: CalendarCardProps) => {
+  const { toast } = useToast();
+
+  const handleAddToCalendar = () => {
+    addToGoogleCalendar(date);
+    toast({
+      title: "Adicionando ao Google Calendar",
+      description: "Uma nova janela foi aberta para adicionar o evento.",
+    });
+  };
+
   return (
     <motion.div
       initial={{ y: 20, opacity: 0 }}
@@ -66,6 +96,15 @@ export const CalendarCard = ({ date, index }: CalendarCardProps) => {
                 </span>
               )}
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleAddToCalendar}
+              className="w-full mt-2 text-xs text-neutral-dark hover:text-primary hover:bg-primary/10"
+            >
+              <CalendarPlus className="h-4 w-4 mr-1" />
+              Adicionar ao Google Calendar
+            </Button>
           </div>
         </CardContent>
       </Card>

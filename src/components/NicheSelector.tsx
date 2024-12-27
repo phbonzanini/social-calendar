@@ -72,7 +72,7 @@ export const NicheSelector = () => {
             variant="outline"
             role="combobox"
             aria-expanded={open}
-            className="w-full justify-between text-neutral-dark"
+            className="w-full justify-between text-white bg-neutral-dark hover:bg-neutral-dark/90"
           >
             {selectedNiches.length > 0
               ? `${selectedNiches.length} nicho${
