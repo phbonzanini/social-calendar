@@ -72,7 +72,7 @@ export const NicheSelector = () => {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-full p-0">
-          <Command>
+          <Command className="bg-white rounded-lg">
             <CommandInput placeholder="Procurar nicho..." className="h-9" />
             <CommandList>
               <CommandEmpty>Nenhum nicho encontrado.</CommandEmpty>
@@ -81,7 +81,7 @@ export const NicheSelector = () => {
                   <CommandItem
                     key={niche.value}
                     onSelect={() => toggleNiche(niche.value)}
-                    className="flex items-center gap-2 cursor-pointer"
+                    className="flex items-center gap-2 cursor-pointer hover:bg-neutral-50"
                   >
                     <div
                       className={`w-4 h-4 border rounded-sm flex items-center justify-center ${

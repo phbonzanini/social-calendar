@@ -23,11 +23,11 @@ export const CalendarHeader = ({
 
   return (
     <div className="mb-6">
-      <div className="flex justify-between items-start mb-2">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-2">
         <h1 className="text-3xl font-bold text-neutral-dark">
           Seu Calendário Personalizado
         </h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
           <Button
             onClick={onExportPDF}
             variant="outline"
