@@ -1,7 +1,7 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { CalendarPlus } from "lucide-react";
 import { motion } from "framer-motion";
+import { Card, CardContent } from "@/components/ui/card";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 interface CalendarDate {
@@ -16,29 +16,29 @@ interface CalendarCardProps {
   index: number;
 }
 
-const getDateTypeLabel = (category: string) => {
-  switch (category) {
+const getDateTypeLabel = (type: CalendarDate["category"]) => {
+  switch (type) {
     case "commemorative":
       return "Data Comemorativa";
     case "holiday":
       return "Feriado Nacional";
     case "optional":
-      return "Ponto Facultativo";
+      return "Data Opcional";
     default:
-      return "";
+      return "Outro";
   }
 };
 
-const getDateTypeStyle = (category: string) => {
-  switch (category) {
+const getDateTypeColor = (type: CalendarDate["category"]) => {
+  switch (type) {
     case "commemorative":
       return "bg-blue-100 text-blue-800";
     case "holiday":
       return "bg-red-100 text-red-800";
     case "optional":
-      return "bg-gray-100 text-gray-800";
+      return "bg-green-100 text-green-800";
     default:
-      return "";
+      return "bg-gray-100 text-gray-800";
   }
 };
 
@@ -47,63 +47,61 @@ const addToGoogleCalendar = (date: CalendarDate) => {
   
   // Format dates to YYYYMMDD format required by Google Calendar
   const formatDate = (date: Date) => {
-    return date.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}${month}${day}`;
   };
 
+  const formattedDate = formatDate(eventDate);
+  const baseUrl = 'https://calendar.google.com/calendar/render';
   const params = new URLSearchParams({
     action: 'TEMPLATE',
     text: date.title,
-    dates: `${formatDate(eventDate)}/${formatDate(eventDate)}`,
+    dates: `${formattedDate}/${formattedDate}`,
     details: `${getDateTypeLabel(date.category)} - ${date.description}`,
   });
 
-  window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank');
+  window.open(`${baseUrl}?${params.toString()}`, '_blank');
 };
 
 export const CalendarCard = ({ date, index }: CalendarCardProps) => {
   const { toast } = useToast();
+  const formattedDate = new Date(date.date).toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+  });
 
   const handleAddToCalendar = () => {
     addToGoogleCalendar(date);
     toast({
-      title: "Adicionando ao Google Calendar",
-      description: "Uma nova janela foi aberta para adicionar o evento.",
+      title: "Evento adicionado",
+      description: "O evento foi aberto no Google Calendar",
     });
   };
 
   return (
     <motion.div
-      initial={{ y: 20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
     >
-      <Card className="hover:shadow-md transition-shadow bg-white/90 backdrop-blur-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-neutral-dark">
-              {date.title}
-            </span>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-neutral">
-                {new Date(date.date).toLocaleDateString("pt-BR")}
+      <Card className="h-full">
+        <CardContent className="p-6">
+          <div className="flex flex-col gap-4">
+            <div>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDateTypeColor(date.category)}`}>
+                {getDateTypeLabel(date.category)}
               </span>
-              {date.category !== "optional" && (
-                <span
-                  className={`px-2 py-0.5 rounded-full text-xs ${getDateTypeStyle(
-                    date.category
-                  )}`}
-                >
-                  {getDateTypeLabel(date.category)}
-                </span>
-              )}
+              <h3 className="text-lg font-semibold mt-2">{date.title}</h3>
+              <p className="text-sm text-neutral mt-1">{formattedDate}</p>
             </div>
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
+              className="w-full flex items-center gap-2"
               onClick={handleAddToCalendar}
-              className="w-full mt-2 text-xs text-neutral-dark hover:text-primary hover:bg-primary/10"
             >
-              <CalendarPlus className="h-4 w-4 mr-1" />
+              <CalendarIcon className="h-4 w-4" />
               Adicionar ao Google Calendar
             </Button>
           </div>
