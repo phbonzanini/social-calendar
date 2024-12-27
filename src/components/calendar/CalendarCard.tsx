@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { motion } from "framer-motion";
 
 interface CalendarCardProps {
@@ -46,24 +46,26 @@ export const CalendarCard = ({ date, index }: CalendarCardProps) => {
       animate={{ y: 0, opacity: 1 }}
       transition={{ delay: index * 0.1 }}
     >
-      <Card className="h-full hover:shadow-lg transition-shadow bg-white/90 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">{date.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-2">
-            {new Date(date.date).toLocaleDateString("pt-BR")}
-          </p>
-          <div className="mb-2">
-            {date.category !== "optional" && (
-              <span
-                className={`inline-block px-2 py-1 rounded-full text-xs ${getDateTypeStyle(
-                  date.category
-                )}`}
-              >
-                {getDateTypeLabel(date.category)}
+      <Card className="hover:shadow-md transition-shadow bg-white/90 backdrop-blur-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium text-neutral-dark">
+              {date.title}
+            </span>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-neutral">
+                {new Date(date.date).toLocaleDateString("pt-BR")}
               </span>
-            )}
+              {date.category !== "optional" && (
+                <span
+                  className={`px-2 py-0.5 rounded-full text-xs ${getDateTypeStyle(
+                    date.category
+                  )}`}
+                >
+                  {getDateTypeLabel(date.category)}
+                </span>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>

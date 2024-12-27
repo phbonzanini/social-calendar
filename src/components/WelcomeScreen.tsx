@@ -21,17 +21,20 @@ export const WelcomeScreen = () => {
           Planejamento Inteligente
         </span>
         <h1 className="text-4xl md:text-5xl font-bold text-neutral-dark mb-6">
-          Social Calendar
+          Social Calendar 2025
         </h1>
         <p className="text-lg text-neutral mb-8">
           Organize suas datas comemorativas e planeje suas campanhas de forma inteligente
         </p>
-        <Button
-          onClick={() => navigate("/select-niche")}
-          className="bg-primary hover:bg-primary-dark text-white px-8 py-6 rounded-lg text-lg transition-all hover:shadow-lg"
-        >
-          Começar Agora
-        </Button>
+        <div className="flex flex-col items-center gap-2">
+          <Button
+            onClick={() => navigate("/select-niche")}
+            className="bg-primary hover:bg-primary-dark text-white px-8 py-6 rounded-lg text-lg transition-all hover:shadow-lg"
+          >
+            Começar Agora
+          </Button>
+          <span className="text-xs italic text-neutral/70">100% gratuito</span>
+        </div>
       </motion.div>
     </motion.div>
   );
