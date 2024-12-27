@@ -22,7 +22,6 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log('Buscando datas para os nichos:', niches);
   
   try {
-    // Tentar usar a busca com GPT primeiro
     const { data: gptResponse, error: gptError } = await supabase.functions.invoke('search-dates', {
       body: { niches },
     });
@@ -45,7 +44,6 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
     console.log('Nenhuma data encontrada via GPT, usando busca padrão');
     
-    // Fallback para busca padrão
     const { data: fallbackData, error: fallbackError } = await supabase
       .from('dastas_2025')
       .select('*')
@@ -95,13 +93,11 @@ const Calendar = () => {
     }
   });
 
-  // Helper function to get niche label from value
   const getNicheLabel = (value: string) => {
     const niche = niches.find(n => n.value === value);
     return niche ? niche.label : value;
   };
 
-  // Helper function to get date type label
   const getDateTypeLabel = (category: string) => {
     switch (category) {
       case 'commemorative':
