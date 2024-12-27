@@ -31,7 +31,17 @@ export const niches = [
   { value: "books", label: "Livraria" },
   { value: "games", label: "Games" },
   { value: "toys", label: "Brinquedos" },
-  { value: "jewelry", label: "Joias e Acessórios" }
+  { value: "jewelry", label: "Joias e Acessórios" },
+  { value: "financial", label: "Financeiro" },
+  { value: "fitness", label: "Fitness" },
+  { value: "travel", label: "Viagens e Turismo" },
+  { value: "art", label: "Arte e Cultura" },
+  { value: "music", label: "Música" },
+  { value: "photography", label: "Fotografia" },
+  { value: "garden", label: "Jardinagem" },
+  { value: "baby", label: "Bebês e Maternidade" },
+  { value: "office", label: "Material de Escritório" },
+  { value: "construction", label: "Construção" }
 ];
 
 export const NicheSelector = () => {
