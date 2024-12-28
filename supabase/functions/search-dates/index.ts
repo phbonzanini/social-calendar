@@ -24,28 +24,27 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Construir a query para buscar datas que correspondem a qualquer um dos nichos selecionados
-    const query = supabase
+    // Query simplificada usando OR diretamente no SQL
+    const { data: dates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .in('nicho 1', niches)
-      .or(`nicho 2.in.(${niches.join(',')})`)
-      .or(`nicho 3.in.(${niches.join(',')})`)
+      .or(`nicho 1.in.(${niches.map(n => `'${n}'`).join(',')}),nicho 2.in.(${niches.map(n => `'${n}'`).join(',')}),nicho 3.in.(${niches.map(n => `'${n}'`).join(',')})`)
       .order('data');
 
-    console.log('Executando query...');
-    const { data: dates, error: dbError } = await query;
-
+    console.log('Query executada');
+    
     if (dbError) {
       console.error('Erro na consulta:', dbError);
       throw dbError;
     }
 
     console.log('Datas encontradas:', dates?.length || 0);
+    if (dates && dates.length > 0) {
+      console.log('Exemplo de primeira data:', dates[0]);
+    }
 
     if (!dates || dates.length === 0) {
-      // Se não encontrou datas específicas, buscar feriados nacionais
-      console.log('Buscando feriados nacionais...');
+      console.log('Nenhuma data específica encontrada, buscando feriados...');
       const { data: holidays, error: holidayError } = await supabase
         .from('datas_2025')
         .select('*')
@@ -72,7 +71,6 @@ serve(async (req) => {
       );
     }
 
-    // Formatar as datas encontradas
     const formattedDates = dates.map(date => ({
       date: date.data,
       title: date.descrição,
@@ -81,9 +79,6 @@ serve(async (req) => {
     }));
 
     console.log('Total de datas formatadas:', formattedDates.length);
-    if (formattedDates.length > 0) {
-      console.log('Exemplo de data formatada:', formattedDates[0]);
-    }
 
     return new Response(
       JSON.stringify({ dates: formattedDates }), 
