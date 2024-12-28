@@ -24,7 +24,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
-    // Primeiro buscamos todas as datas do banco para ter um conjunto completo
+    // Primeiro buscamos todas as datas do banco
     console.log("Buscando todas as datas do banco");
     const { data: allDates, error: dbError } = await supabase
       .from("datas_2025")
@@ -41,7 +41,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       throw new Error("Nenhuma data encontrada no banco de dados");
     }
 
-    // Depois usamos a Edge Function para ranquear e filtrar as datas mais relevantes
+    // Enviamos para análise via GPT
     console.log("Enviando datas para análise via GPT");
     const { data: searchData, error: searchError } = await supabase.functions.invoke(
       "search-dates",
@@ -55,25 +55,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
     if (searchError) {
       console.error("Erro na função de busca:", searchError);
-      // Fallback: retorna datas que contenham os nichos selecionados
-      console.log("Fallback: filtrando datas por nichos");
-      const filteredDates = allDates.filter(date => 
-        date.niches.some((niche: string) => 
-          niches.includes(niche.toLowerCase())
-        )
-      );
-
-      if (filteredDates.length === 0) {
-        console.log("Nenhuma data encontrada para os nichos selecionados");
-        throw new Error("Nenhuma data encontrada para os nichos selecionados");
-      }
-
-      return filteredDates.map((item) => ({
-        date: item.data,
-        title: item.descrição,
-        category: item.tipo as "commemorative" | "holiday" | "optional",
-        description: item.descrição,
-      }));
+      throw searchError;
     }
 
     if (!searchData?.dates || searchData.dates.length === 0) {
