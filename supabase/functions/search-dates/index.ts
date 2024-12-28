@@ -1,6 +1,8 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -29,36 +31,27 @@ serve(async (req) => {
       );
     }
 
-    // Formatar as datas para o prompt do GPT
-    const formattedDates = allDates.map(date => ({
-      data: date.data,
-      descricao: date.descrição,
-      tipo: date.tipo
-    }));
-
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key não configurada');
-    }
-
     const prompt = `
-      Você é um especialista em marketing digital e calendário de conteúdo.
+      Você é um especialista em marketing digital e calendário de conteúdo para redes sociais.
       
       Analise as datas comemorativas fornecidas e identifique quais são relevantes 
       para os seguintes nichos de negócio: ${niches.join(', ')}.
 
-      Datas para análise:
-      ${JSON.stringify(formattedDates, null, 2)}
+      Para cada data, considere:
+      1. Relevância direta para vendas e promoções
+      2. Oportunidades de marketing de conteúdo
+      3. Engajamento em redes sociais
+      4. Campanhas sazonais
+      5. Conexões indiretas que podem ser aproveitadas para marketing
 
-      Instruções importantes:
-      1. Considere TODAS as conexões possíveis entre as datas e os nichos, mesmo que indiretas
-      2. Para cada nicho, pense em como a data pode ser usada para:
-         - Marketing digital e conteúdo
-         - Promoções e vendas
-         - Engajamento nas redes sociais
-      3. Mantenha os dados originais das datas (data, descrição e tipo)
-      4. Retorne TODAS as datas que tenham qualquer relevância, mesmo que a conexão seja indireta
-      5. Seja criativo ao pensar em oportunidades de marketing para cada nicho
+      Datas para análise:
+      ${JSON.stringify(allDates, null, 2)}
+
+      Retorne TODAS as datas que possam ser aproveitadas para marketing digital, mesmo que a conexão seja indireta.
+      Por exemplo:
+      - Para o nicho "saúde", datas como "Dia Mundial da Alimentação" são relevantes
+      - Para o nicho "moda", datas como "Dia das Mães" são oportunidades de vendas
+      - Para o nicho "educação", datas como "Volta às aulas" são essenciais
 
       Retorne apenas um array JSON com as datas selecionadas, mantendo este formato para cada data:
       {
@@ -83,7 +76,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Você é um especialista em marketing digital que analisa datas comemorativas para criar conteúdo relevante. Seja criativo ao identificar oportunidades, mesmo que as conexões não sejam óbvias.'
+            content: 'Você é um especialista em marketing digital que analisa datas comemorativas para criar oportunidades de marketing e vendas. Seja criativo ao identificar conexões entre datas e nichos de negócio.'
           },
           {
             role: 'user',
@@ -111,12 +104,13 @@ serve(async (req) => {
       const content = data.choices[0].message.content;
       console.log('Conteúdo da resposta:', content);
       
+      // Tenta encontrar e parsear o array JSON na resposta
       const match = content.match(/\[[\s\S]*\]/);
       if (match) {
         relevantDates = JSON.parse(match[0]);
         console.log('Datas relevantes encontradas:', relevantDates.length);
         
-        // Validar e filtrar as datas retornadas
+        // Valida e filtra as datas retornadas
         relevantDates = relevantDates.filter(date => 
           date.data && 
           date.descrição && 

@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { CalendarCard } from "@/components/calendar/CalendarCard";
 import { exportToPDF, exportToCSV } from "@/utils/exportUtils";
