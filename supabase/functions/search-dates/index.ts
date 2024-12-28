@@ -27,34 +27,10 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // First try to get dates directly from the database
-    const { data: directDates, error: dbError } = await supabase
-      .from('datas_2025')
-      .select('*')
-      .order('data');
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      throw dbError;
-    }
-
-    if (!directDates || directDates.length === 0) {
-      console.log('No dates found in database');
-      return new Response(
-        JSON.stringify({ dates: [] }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
-      );
-    }
-
-    console.log('Found dates in database:', directDates.length);
-
     try {
       // Prepare the prompt for GPT
       const prompt = `
         Analise estas datas comemorativas e identifique quais são mais relevantes para os seguintes nichos de negócio: ${niches.join(', ')}.
-        
-        Datas disponíveis:
-        ${directDates.map(d => `${d.id}. ${d.data}: ${d.descrição} (${d.tipo})`).join('\n')}
         
         Retorne apenas os IDs das datas mais relevantes separados por vírgula.
         Exemplo: 1,4,7,12
@@ -89,42 +65,73 @@ serve(async (req) => {
       }
 
       const gptData = await gptResponse.json();
-      console.log('GPT response received');
+      console.log('GPT response received:', gptData);
 
       if (!gptData.choices?.[0]?.message?.content) {
         throw new Error('Invalid GPT response format');
       }
 
+      // Get dates from database based on niches
+      const { data: dates, error: dbError } = await supabase
+        .from('datas_2025')
+        .select('*')
+        .order('data');
+
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
+
+      if (!dates || dates.length === 0) {
+        console.log('No dates found in database');
+        return new Response(
+          JSON.stringify({ dates: [] }), 
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+        );
+      }
+
+      // Filter dates based on GPT response
       const relevantIds = gptData.choices[0].message.content
         .split(',')
         .map(id => parseInt(id.trim()))
         .filter(id => !isNaN(id));
 
-      console.log('Relevant IDs:', relevantIds);
+      console.log('Relevant IDs from GPT:', relevantIds);
 
-      if (relevantIds.length === 0) {
-        console.log('No relevant dates found by GPT, returning all dates');
-        return new Response(
-          JSON.stringify({ dates: directDates }), 
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
-        );
-      }
-
-      // Get the filtered dates
-      const relevantDates = directDates.filter(date => relevantIds.includes(date.id));
-      console.log('Returning relevant dates:', relevantDates.length);
+      const filteredDates = dates.filter(date => relevantIds.includes(date.id));
+      console.log('Filtered dates count:', filteredDates.length);
 
       return new Response(
-        JSON.stringify({ dates: relevantDates }), 
+        JSON.stringify({ dates: filteredDates }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
 
     } catch (gptError) {
       console.error('GPT API error:', gptError);
-      // Fallback: return all dates if GPT fails
-      console.log('Falling back to returning all dates due to GPT error');
+      
+      // If GPT fails, use database filtering as fallback
+      const { data: fallbackDates, error: fallbackError } = await supabase
+        .from('datas_2025')
+        .select('*')
+        .order('data');
+
+      if (fallbackError) {
+        throw fallbackError;
+      }
+
+      // Simple keyword matching as fallback
+      const filteredDates = fallbackDates.filter(date => {
+        const description = date.descrição?.toLowerCase() || '';
+        return niches.some(niche => 
+          description.includes(niche.toLowerCase()) ||
+          description.includes(niche.toLowerCase().replace('-', ' '))
+        );
+      });
+
+      console.log('Fallback filtered dates count:', filteredDates.length);
+
       return new Response(
-        JSON.stringify({ dates: directDates }), 
+        JSON.stringify({ dates: filteredDates }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
