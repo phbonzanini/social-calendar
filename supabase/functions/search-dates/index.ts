@@ -15,7 +15,7 @@ serve(async (req) => {
   try {
     const { niches } = await req.json();
 
-    console.log('Recebido pedido para nichos:', niches);
+    console.log('🔍 Recebido pedido para nichos:', niches);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Nichos inválidos ou não fornecidos');
@@ -25,9 +25,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('🔍 Iniciando busca completa no banco de dados...');
+    console.log('🔍 Iniciando busca no banco de dados...');
 
-    // Buscar TODAS as datas disponíveis
+    // Buscar todas as datas
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
@@ -57,7 +57,9 @@ serve(async (req) => {
         data: date.data,
         descricao: date.descrição,
         tipo: date.tipo,
-        niches: date.niches
+        nicho1: date["nicho 1"],
+        nicho2: date["nicho 2"],
+        nicho3: date["nicho 3"]
       });
 
       // Sempre incluir feriados nacionais
@@ -66,23 +68,24 @@ serve(async (req) => {
         return true;
       }
 
-      // Verificar datas específicas para os nichos selecionados
-      if (date.niches && Array.isArray(date.niches)) {
-        const dateNichesLower = date.niches.map(n => n.toLowerCase());
-        
-        // Verificar interseção entre nichos da data e nichos selecionados
-        const matchingNiches = dateNichesLower.filter(niche => 
-          selectedNichesLower.includes(niche)
-        );
+      // Verificar se algum dos nichos da data corresponde aos nichos selecionados
+      const dateNiches = [
+        date["nicho 1"]?.toLowerCase(),
+        date["nicho 2"]?.toLowerCase(),
+        date["nicho 3"]?.toLowerCase()
+      ].filter(Boolean); // Remove valores null/undefined
 
-        if (matchingNiches.length > 0) {
-          console.log(`✅ Data incluída - corresponde aos nichos: ${matchingNiches.join(', ')}`);
-          return true;
-        }
+      const hasMatchingNiche = dateNiches.some(niche => 
+        selectedNichesLower.includes(niche)
+      );
+
+      if (hasMatchingNiche) {
+        console.log(`✅ Data incluída - corresponde aos nichos selecionados:`, date.descrição);
+        return true;
       }
 
       // Incluir datas comemorativas gerais
-      if (date.tipo === 'commemorative' && (!date.niches || date.niches.length === 0)) {
+      if (date.tipo === 'commemorative' && (!dateNiches.length)) {
         console.log('✅ Incluindo data comemorativa geral:', date.descrição);
         return true;
       }
@@ -93,15 +96,8 @@ serve(async (req) => {
 
     console.log(`\n📊 Total de datas relevantes encontradas: ${relevantDates.length}`);
 
-    // Remover possíveis duplicatas
-    const uniqueDates = Array.from(new Map(
-      relevantDates.map(date => [date.data + date.descrição, date])
-    ).values());
-
-    console.log(`📊 Após remover duplicatas: ${uniqueDates.length} datas`);
-
     // Formatar datas para resposta
-    const formattedDates = uniqueDates.map(date => ({
+    const formattedDates = relevantDates.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo,

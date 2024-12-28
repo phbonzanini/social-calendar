@@ -15,7 +15,9 @@ export type Database = {
           data: string | null
           descrição: string | null
           id: number
-          niches: string[] | null
+          "nicho 1": string | null
+          "nicho 2": string | null
+          "nicho 3": string | null
           tipo: string | null
         }
         Insert: {
@@ -23,7 +25,9 @@ export type Database = {
           data?: string | null
           descrição?: string | null
           id?: number
-          niches?: string[] | null
+          "nicho 1"?: string | null
+          "nicho 2"?: string | null
+          "nicho 3"?: string | null
           tipo?: string | null
         }
         Update: {
@@ -31,7 +35,9 @@ export type Database = {
           data?: string | null
           descrição?: string | null
           id?: number
-          niches?: string[] | null
+          "nicho 1"?: string | null
+          "nicho 2"?: string | null
+          "nicho 3"?: string | null
           tipo?: string | null
         }
         Relationships: []
