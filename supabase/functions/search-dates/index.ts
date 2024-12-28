@@ -47,56 +47,25 @@ serve(async (req) => {
 
     console.log(`📊 Total de datas no banco: ${allDates.length}`);
 
-    // Converter nichos selecionados para lowercase para comparação
+    // Converter nichos selecionados para lowercase
     const selectedNichesLower = niches.map(n => n.toLowerCase());
 
     // Filtrar as datas relevantes
     const relevantDates = allDates.filter(date => {
-      // Log detalhado para cada data
-      console.log('\n📅 Analisando data:', {
-        data: date.data,
-        descricao: date.descrição,
-        tipo: date.tipo,
-        nicho1: date["nicho 1"],
-        nicho2: date["nicho 2"],
-        nicho3: date["nicho 3"]
-      });
-
       // Sempre incluir feriados nacionais
       if (date.tipo === 'holiday') {
-        console.log('✅ Incluindo feriado nacional:', date.descrição);
         return true;
       }
 
       // Verificar se algum dos nichos da data corresponde aos nichos selecionados
-      const dateNiches = [
-        date["nicho 1"],
-        date["nicho 2"],
-        date["nicho 3"]
-      ]
-      .filter(Boolean) // Remove valores null/undefined
-      .map(niche => niche.toLowerCase()); // Converter para lowercase
+      const nicho1 = date["nicho 1"]?.toLowerCase();
+      const nicho2 = date["nicho 2"]?.toLowerCase();
+      const nicho3 = date["nicho 3"]?.toLowerCase();
 
-      console.log('📌 Nichos da data:', dateNiches);
-      console.log('📌 Nichos selecionados:', selectedNichesLower);
-
-      const hasMatchingNiche = dateNiches.some(niche => 
-        selectedNichesLower.includes(niche)
-      );
-
-      if (hasMatchingNiche) {
-        console.log(`✅ Data incluída - corresponde aos nichos selecionados:`, date.descrição);
-        return true;
-      }
-
-      // Incluir datas comemorativas gerais (sem nichos específicos)
-      if (date.tipo === 'commemorative' && dateNiches.length === 0) {
-        console.log('✅ Incluindo data comemorativa geral:', date.descrição);
-        return true;
-      }
-
-      console.log('❌ Data não incluída:', date.descrição);
-      return false;
+      // Se qualquer um dos nichos da data corresponder aos nichos selecionados, incluir a data
+      return selectedNichesLower.includes(nicho1) || 
+             selectedNichesLower.includes(nicho2) || 
+             selectedNichesLower.includes(nicho3);
     });
 
     console.log(`\n📊 Total de datas relevantes encontradas: ${relevantDates.length}`);
@@ -111,13 +80,6 @@ serve(async (req) => {
 
     // Ordenar datas cronologicamente
     formattedDates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-    console.log('\n📋 Resumo das datas por categoria:');
-    const summary = formattedDates.reduce((acc, date) => {
-      acc[date.category] = (acc[date.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-    console.log(summary);
 
     return new Response(
       JSON.stringify({ dates: formattedDates }), 
