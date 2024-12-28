@@ -15,8 +15,8 @@ serve(async (req) => {
 
   try {
     const { niches, allDates } = await req.json();
-    console.log('Received request with niches:', niches);
-    console.log('Number of dates received:', allDates?.length || 0);
+    console.log('Recebido request com nichos:', niches);
+    console.log('Número de datas recebidas:', allDates?.length || 0);
     
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Nichos inválidos ou vazios');
@@ -29,35 +29,35 @@ serve(async (req) => {
     const prompt = `
       Você é um especialista em marketing digital que analisa datas comemorativas para criar conteúdo relevante.
       
-      Sua tarefa é analisar ${allDates.length} datas comemorativas e identificar as mais relevantes 
+      Sua tarefa é analisar as datas comemorativas fornecidas e identificar as mais relevantes 
       para os seguintes nichos: ${niches.join(', ')}.
 
       Datas para análise:
       ${JSON.stringify(allDates, null, 2)}
 
       Instruções importantes:
-      1. Analise cada data e identifique conexões diretas ou indiretas com os nichos
-      2. Considere o potencial de marketing e engajamento de cada data
+      1. Analise cada data e identifique conexões diretas E indiretas com os nichos
+      2. Seja mais flexível na análise, considerando oportunidades de marketing mesmo que a conexão não seja óbvia
       3. Mantenha todos os campos originais das datas
-      4. Selecione entre 5 e 15 datas mais relevantes
+      4. Selecione TODAS as datas que possam ter alguma relevância, sem limite máximo
       5. Não altere os dados originais
-      6. Retorne apenas o array JSON
+      6. Retorne apenas o array JSON com as datas selecionadas
 
       Formato da resposta (exemplo):
       [
         {
           "data": "2025-01-01",
-          "descrição": "Dia Mundial da Paz",
+          "descrição": "Dia da Confraternização Universal",
           "tipo": "commemorative",
-          "niches": ["saude", "bem-estar"],
-          "relevância": "Data ideal para campanhas sobre bem-estar mental e equilíbrio"
+          "niches": ["food", "fashion"],
+          "relevância": "Oportunidade para campanhas de produtos para festas e confraternizações"
         }
       ]
 
       Retorne apenas o array JSON, sem texto adicional.
     `;
 
-    console.log('Sending request to GPT-4o-mini for analysis');
+    console.log('Enviando request para GPT-4o-mini');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -70,21 +70,21 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'Você é um especialista em marketing digital que analisa datas comemorativas para criar conteúdo relevante. Retorne apenas o array JSON com as datas selecionadas.' 
+            content: 'Você é um especialista em marketing digital que analisa datas comemorativas para criar conteúdo relevante. Seja criativo e flexível ao identificar oportunidades de marketing, mesmo que as conexões não sejam óbvias. Retorne apenas o array JSON com as datas selecionadas.' 
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.3,
+        temperature: 0.7,
       }),
     });
 
     if (!response.ok) {
-      console.error('Error in GPT response:', await response.text());
+      console.error('Erro na resposta do GPT:', await response.text());
       throw new Error('Erro na análise das datas com GPT');
     }
 
     const data = await response.json();
-    console.log('GPT response received');
+    console.log('Resposta do GPT recebida');
 
     if (!data.choices?.[0]?.message?.content) {
       throw new Error('Resposta inválida do GPT');
@@ -93,16 +93,16 @@ serve(async (req) => {
     let relevantDates;
     try {
       const content = data.choices[0].message.content;
-      // Extract JSON array from response
+      // Extrair array JSON da resposta
       const match = content.match(/\[[\s\S]*\]/);
       if (match) {
         relevantDates = JSON.parse(match[0]);
-        console.log('Successfully parsed relevant dates:', relevantDates.length);
+        console.log('Datas relevantes processadas com sucesso:', relevantDates.length);
       } else {
         throw new Error('Formato de resposta inválido');
       }
     } catch (error) {
-      console.error('Error processing GPT response:', error);
+      console.error('Erro ao processar resposta do GPT:', error);
       throw new Error('Erro ao processar datas relevantes');
     }
 
@@ -112,7 +112,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in search-dates function:', error);
+    console.error('Erro na função search-dates:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,

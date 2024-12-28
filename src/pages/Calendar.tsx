@@ -24,24 +24,26 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
-    // Primeiro buscamos todas as datas do banco
-    console.log("Buscando todas as datas do banco");
-    const { data: allDates, error: dbError } = await supabase
+    // Primeiro buscamos todas as datas que tenham pelo menos um dos nichos selecionados
+    const { data: relevantDates, error: dbError } = await supabase
       .from("datas_2025")
-      .select("*");
+      .select("*")
+      .contains('niches', niches);
 
     if (dbError) {
       console.error("Erro na busca no banco:", dbError);
       throw dbError;
     }
 
-    if (!allDates) {
+    if (!relevantDates) {
       console.error("Nenhuma data encontrada no banco");
       throw new Error("Nenhuma data encontrada no banco de dados");
     }
 
-    // Se não houver datas, retornamos um array vazio
-    if (allDates.length === 0) {
+    console.log("Datas encontradas no banco:", relevantDates.length);
+
+    // Se não houver datas relevantes, retornamos array vazio
+    if (relevantDates.length === 0) {
       return [];
     }
 
@@ -52,7 +54,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       {
         body: { 
           niches,
-          allDates
+          allDates: relevantDates
         },
       }
     );
@@ -63,11 +65,11 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
     }
 
     if (!searchData?.dates || searchData.dates.length === 0) {
-      console.log("Nenhuma data relevante encontrada");
+      console.log("Nenhuma data relevante encontrada após análise GPT");
       return [];
     }
 
-    console.log("Datas relevantes encontradas:", searchData.dates.length);
+    console.log("Datas relevantes encontradas após análise GPT:", searchData.dates.length);
     return searchData.dates.map((item: any) => ({
       date: item.data,
       title: item.descrição,
