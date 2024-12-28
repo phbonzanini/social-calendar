@@ -24,22 +24,28 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Buscar todas as datas que correspondem aos nichos selecionados usando OR
-    const { data: dates, error: dbError } = await supabase
+    // Construir a query para buscar datas que correspondem a qualquer um dos nichos selecionados
+    const query = supabase
       .from('datas_2025')
       .select('*')
-      .or(`nicho 1.eq.${niches.join('},nicho 1.eq.{')},nicho 2.eq.${niches.join('},nicho 2.eq.{')},nicho 3.eq.${niches.join('},nicho 3.eq.{')}`)
+      .in('nicho 1', niches)
+      .or(`nicho 2.in.(${niches.join(',')})`)
+      .or(`nicho 3.in.(${niches.join(',')})`)
       .order('data');
+
+    console.log('Executando query...');
+    const { data: dates, error: dbError } = await query;
 
     if (dbError) {
       console.error('Erro na consulta:', dbError);
       throw dbError;
     }
 
-    console.log('Datas encontradas na consulta:', dates?.length || 0);
+    console.log('Datas encontradas:', dates?.length || 0);
 
     if (!dates || dates.length === 0) {
-      // Buscar feriados nacionais se não encontrou datas específicas
+      // Se não encontrou datas específicas, buscar feriados nacionais
+      console.log('Buscando feriados nacionais...');
       const { data: holidays, error: holidayError } = await supabase
         .from('datas_2025')
         .select('*')
