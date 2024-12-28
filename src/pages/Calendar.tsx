@@ -28,17 +28,21 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
     console.log("Buscando todas as datas do banco");
     const { data: allDates, error: dbError } = await supabase
       .from("datas_2025")
-      .select("*")
-      .order("data");
+      .select("*");
 
     if (dbError) {
       console.error("Erro na busca no banco:", dbError);
       throw dbError;
     }
 
-    if (!allDates || allDates.length === 0) {
+    if (!allDates) {
       console.error("Nenhuma data encontrada no banco");
       throw new Error("Nenhuma data encontrada no banco de dados");
+    }
+
+    // Se não houver datas, retornamos um array vazio
+    if (allDates.length === 0) {
+      return [];
     }
 
     // Enviamos para análise via GPT
@@ -60,7 +64,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
     if (!searchData?.dates || searchData.dates.length === 0) {
       console.log("Nenhuma data relevante encontrada");
-      throw new Error("Nenhuma data relevante encontrada para os nichos selecionados");
+      return [];
     }
 
     console.log("Datas relevantes encontradas:", searchData.dates.length);

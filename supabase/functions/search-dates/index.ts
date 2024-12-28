@@ -27,31 +27,34 @@ serve(async (req) => {
     }
 
     const prompt = `
-      Você é um especialista em marketing que analisa datas comemorativas para diferentes nichos de negócio.
+      Você é um especialista em marketing digital que analisa datas comemorativas para criar conteúdo relevante.
       
-      Analise as ${allDates.length} datas comemorativas fornecidas e identifique as mais relevantes 
+      Sua tarefa é analisar ${allDates.length} datas comemorativas e identificar as mais relevantes 
       para os seguintes nichos: ${niches.join(', ')}.
 
       Datas para análise:
       ${JSON.stringify(allDates, null, 2)}
 
       Instruções importantes:
-      1. Retorne APENAS as datas que têm uma conexão clara e direta com os nichos selecionados
-      2. Para cada data, explique brevemente por que ela é relevante para o(s) nicho(s)
-      3. Mantenha a estrutura original das datas (data, descrição, tipo)
-      4. Retorne entre 5 e 15 datas mais relevantes
-      5. Não modifique os campos originais
-      6. Retorne apenas o array JSON com as datas selecionadas
+      1. Analise cada data e identifique conexões diretas ou indiretas com os nichos
+      2. Considere o potencial de marketing e engajamento de cada data
+      3. Mantenha todos os campos originais das datas
+      4. Selecione entre 5 e 15 datas mais relevantes
+      5. Não altere os dados originais
+      6. Retorne apenas o array JSON
 
-      Formato da resposta:
+      Formato da resposta (exemplo):
       [
         {
           "data": "2025-01-01",
-          "descrição": "Descrição original da data",
-          "tipo": "tipo original",
-          "relevância": "Breve explicação da relevância para o(s) nicho(s)"
+          "descrição": "Dia Mundial da Paz",
+          "tipo": "commemorative",
+          "niches": ["saude", "bem-estar"],
+          "relevância": "Data ideal para campanhas sobre bem-estar mental e equilíbrio"
         }
       ]
+
+      Retorne apenas o array JSON, sem texto adicional.
     `;
 
     console.log('Sending request to GPT-4o-mini for analysis');
@@ -67,7 +70,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'Você é um especialista em marketing que seleciona datas comemorativas relevantes para diferentes nichos de negócio. Retorne apenas o array JSON com as datas selecionadas.' 
+            content: 'Você é um especialista em marketing digital que analisa datas comemorativas para criar conteúdo relevante. Retorne apenas o array JSON com as datas selecionadas.' 
           },
           { role: 'user', content: prompt }
         ],
