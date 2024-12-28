@@ -1,6 +1,5 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,32 +25,25 @@ serve(async (req) => {
 
     console.log('Attempting to fetch dates for niches:', niches);
 
-    // Construindo a query de forma mais simples e direta
-    let query = supabase
+    // Usando uma query mais simples com or()
+    const { data, error } = await supabase
       .from('datas_2025')
-      .select('*');
-
-    // Adicionando condições OR para cada nicho
-    const conditions = niches.map(niche => {
-      return `nicho1.eq.${niche},nicho2.eq.${niche},nicho3.eq.${niche}`;
-    }).join(',');
-
-    if (conditions) {
-      query = query.or(conditions);
-    }
-
-    // Ordenando por data
-    query = query.order('data');
-
-    console.log('Executing query with conditions:', conditions);
-    
-    const { data, error } = await query;
+      .select('*')
+      .or(`"nicho 1".in.(${niches.map(n => `'${n}'`).join(',')}),` +
+          `"nicho 2".in.(${niches.map(n => `'${n}'`).join(',')}),` +
+          `"nicho 3".in.(${niches.map(n => `'${n}'`).join(',')})`)
+      .order('data');
 
     if (error) {
       console.error('Database error:', error);
-      
-      // Fallback para feriados se nenhuma data específica for encontrada
-      console.log('Fetching default holidays...');
+      throw error;
+    }
+
+    console.log('Query results:', data?.length || 0, 'records found');
+    
+    // Se não encontrou datas específicas, busca feriados
+    if (!data || data.length === 0) {
+      console.log('No specific dates found, fetching holidays...');
       const { data: holidays, error: holidayError } = await supabase
         .from('datas_2025')
         .select('*')
@@ -64,8 +56,7 @@ serve(async (req) => {
       }
 
       console.log('Found holidays:', holidays?.length || 0);
-      
-      // Formatando as datas dos feriados
+
       const formattedHolidays = holidays?.map(date => ({
         date: date.data,
         title: date.descrição,
@@ -79,15 +70,13 @@ serve(async (req) => {
       );
     }
 
-    console.log('Query results:', data?.length || 0, 'records found');
-    
-    // Formatando todas as datas encontradas
-    const formattedDates = data?.map(date => ({
+    // Formata as datas encontradas
+    const formattedDates = data.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo,
       description: date.descrição
-    })) || [];
+    }));
 
     return new Response(
       JSON.stringify({ dates: formattedDates }),
