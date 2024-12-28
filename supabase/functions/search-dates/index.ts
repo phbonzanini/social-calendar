@@ -24,12 +24,24 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Executing query for niches:', niches);
+    // Construct the query conditions for each niche column
+    const nicheConditions = niches.map(niche => 
+      `"nicho 1" = '${niche}' OR "nicho 2" = '${niche}' OR "nicho 3" = '${niche}'`
+    ).join(' OR ');
+
+    const query = `
+      SELECT DISTINCT data, descrição, tipo
+      FROM datas_2025
+      WHERE ${nicheConditions}
+      ORDER BY data;
+    `;
+
+    console.log('Executing query:', query);
 
     const { data, error } = await supabase
       .from('datas_2025')
-      .select('*')
-      .or(`nicho 1.in.(${niches.map(n => `'${n}'`).join(',')}),nicho 2.in.(${niches.map(n => `'${n}'`).join(',')}),nicho 3.in.(${niches.map(n => `'${n}'`).join(',')})`)
+      .select('data, descrição, tipo')
+      .or(nicheConditions)
       .order('data');
 
     if (error) {
@@ -38,12 +50,13 @@ serve(async (req) => {
     }
 
     console.log('Query results:', data ? data.length : 0, 'records found');
+    console.log('Sample of results:', data?.slice(0, 2));
 
     if (!data || data.length === 0) {
       console.log('No dates found, fetching default holidays...');
       const { data: holidays, error: holidayError } = await supabase
         .from('datas_2025')
-        .select('*')
+        .select('data, descrição, tipo')
         .eq('tipo', 'holiday')
         .order('data');
 
