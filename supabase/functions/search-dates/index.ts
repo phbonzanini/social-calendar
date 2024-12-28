@@ -70,10 +70,15 @@ serve(async (req) => {
 
       // Verificar se algum dos nichos da data corresponde aos nichos selecionados
       const dateNiches = [
-        date["nicho 1"]?.toLowerCase(),
-        date["nicho 2"]?.toLowerCase(),
-        date["nicho 3"]?.toLowerCase()
-      ].filter(Boolean); // Remove valores null/undefined
+        date["nicho 1"],
+        date["nicho 2"],
+        date["nicho 3"]
+      ]
+      .filter(Boolean) // Remove valores null/undefined
+      .map(niche => niche.toLowerCase()); // Converter para lowercase
+
+      console.log('📌 Nichos da data:', dateNiches);
+      console.log('📌 Nichos selecionados:', selectedNichesLower);
 
       const hasMatchingNiche = dateNiches.some(niche => 
         selectedNichesLower.includes(niche)
@@ -84,8 +89,8 @@ serve(async (req) => {
         return true;
       }
 
-      // Incluir datas comemorativas gerais
-      if (date.tipo === 'commemorative' && (!dateNiches.length)) {
+      // Incluir datas comemorativas gerais (sem nichos específicos)
+      if (date.tipo === 'commemorative' && dateNiches.length === 0) {
         console.log('✅ Incluindo data comemorativa geral:', date.descrição);
         return true;
       }
