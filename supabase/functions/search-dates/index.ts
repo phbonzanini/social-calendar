@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import OpenAI from 'https://esm.sh/openai@4.28.0';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -19,42 +20,55 @@ serve(async (req) => {
       throw new Error('Nichos inválidos ou não fornecidos');
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const openai = new OpenAI({
+      apiKey: Deno.env.get('OPENAI_API_KEY')!,
+    });
 
-    console.log('Attempting to fetch dates for niches:', niches);
+    const prompt = `Gere uma lista de 10 datas comemorativas relevantes para os seguintes nichos: ${niches.join(', ')}. 
+    Para cada data, forneça:
+    1. A data no formato YYYY-MM-DD (use o ano 2025)
+    2. O título do evento
+    3. Uma breve descrição
+    4. A categoria (use apenas: commemorative, holiday, ou optional)
+    
+    Responda apenas em formato JSON, seguindo este exemplo:
+    [
+      {
+        "date": "2025-01-01",
+        "title": "Dia Mundial da Paz",
+        "description": "Celebração internacional da paz e harmonia",
+        "category": "holiday"
+      }
+    ]`;
 
-    // Query simplificada que busca em todas as colunas de nicho
-    const query = supabase
-      .from('datas_2025')
-      .select('*')
-      .or(niches.map(niche => 
-        `"nicho 1".eq.'${niche}',` +
-        `"nicho 2".eq.'${niche}',` +
-        `"nicho 3".eq.'${niche}'`
-      ).join(','));
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "Você é um especialista em marketing e datas comemorativas. Gere apenas datas relevantes e reais, sem criar datas fictícias."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    });
 
-    const { data, error } = await query;
+    const response = completion.choices[0].message.content;
+    console.log('OpenAI response:', response);
 
-    if (error) {
-      console.error('Database error:', error);
-      throw error;
+    if (!response) {
+      throw new Error('Resposta vazia do OpenAI');
     }
 
-    console.log('Query results:', data?.length || 0, 'records found');
-    console.log('Sample of data:', data?.slice(0, 2));
-
-    // Formata as datas encontradas
-    const formattedDates = (data || []).map(date => ({
-      date: date.data,
-      title: date.descrição,
-      category: date.tipo,
-      description: date.descrição
-    }));
+    const parsedDates = JSON.parse(response).dates || [];
+    console.log('Parsed dates:', parsedDates);
 
     return new Response(
-      JSON.stringify({ dates: formattedDates }),
+      JSON.stringify({ dates: parsedDates }),
       { 
         headers: { 
           ...corsHeaders,
