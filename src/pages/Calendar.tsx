@@ -24,7 +24,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
-    // Primeiro, buscar todas as datas do banco
+    // Fetch all dates from the database
     const { data: allDates, error: dbError } = await supabase
       .from("datas_2025")
       .select("*");
@@ -34,14 +34,14 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       throw dbError;
     }
 
-    if (!allDates) {
-      console.error("Nenhuma data encontrada no banco");
+    console.log("Total de datas encontradas no banco:", allDates?.length || 0);
+
+    if (!allDates || allDates.length === 0) {
+      console.log("Nenhuma data encontrada no banco");
       return [];
     }
 
-    console.log("Total de datas encontradas no banco:", allDates.length);
-
-    // Enviar todas as datas para análise via Edge Function
+    // Send dates for analysis
     console.log("Enviando datas para análise");
     const { data: searchData, error: searchError } = await supabase.functions.invoke(
       "search-dates",
@@ -65,7 +65,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
     console.log("Datas relevantes encontradas:", searchData.dates.length);
 
-    // Mapear as datas para o formato esperado pelo componente
+    // Map the dates to the expected format
     return searchData.dates.map((item: any) => ({
       date: item.data,
       title: item.descrição,
