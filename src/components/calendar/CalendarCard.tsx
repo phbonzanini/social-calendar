@@ -43,7 +43,7 @@ const getDateTypeColor = (type: CalendarDate["category"]) => {
 };
 
 const addToGoogleCalendar = (date: CalendarDate) => {
-  const eventDate = new Date(date.date);
+  const eventDate = new Date(date.date + 'T00:00:00');
   
   // Format dates to YYYYMMDD format required by Google Calendar
   const formatDate = (date: Date) => {
@@ -67,9 +67,10 @@ const addToGoogleCalendar = (date: CalendarDate) => {
 
 export const CalendarCard = ({ date, index }: CalendarCardProps) => {
   const { toast } = useToast();
-  const formattedDate = new Date(date.date).toLocaleDateString('pt-BR', {
+  const formattedDate = new Date(date.date + 'T00:00:00').toLocaleDateString('pt-BR', {
     day: 'numeric',
     month: 'long',
+    timeZone: 'UTC'
   });
 
   const handleAddToCalendar = () => {
