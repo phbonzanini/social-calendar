@@ -28,30 +28,34 @@ serve(async (req) => {
 
     console.log('Querying database for dates...');
 
-    // Primeiro, buscar todas as datas comemorativas e feriados
-    const { data: holidayDates, error: holidayError } = await supabase
+    // Buscar todas as datas disponíveis
+    const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('*')
-      .or('tipo.eq.holiday,tipo.eq.commemorative');
+      .select('*');
 
-    // Depois, buscar datas específicas dos nichos selecionados
-    const { data: nicheDates, error: nicheError } = await supabase
-      .from('datas_2025')
-      .select('*')
-      .overlaps('niches', niches);
-
-    if (holidayError || nicheError) {
-      console.error('Database error:', holidayError || nicheError);
-      throw holidayError || nicheError;
+    if (dbError) {
+      console.error('Database error:', dbError);
+      throw dbError;
     }
 
-    // Combinar e remover duplicatas
-    const allDates = [...(holidayDates || []), ...(nicheDates || [])];
-    const uniqueDates = Array.from(new Map(allDates.map(date => [date.data, date])).values());
+    // Filtrar as datas baseado nos nichos selecionados e datas comemorativas/feriados
+    const relevantDates = allDates.filter(date => {
+      // Sempre incluir feriados e datas comemorativas gerais
+      if (date.tipo === 'holiday' || date.tipo === 'commemorative') {
+        return true;
+      }
 
-    console.log(`Found ${uniqueDates.length} unique dates in database`);
+      // Verificar se a data tem nichos e se algum deles corresponde aos selecionados
+      if (date.niches && Array.isArray(date.niches)) {
+        return date.niches.some(niche => niches.includes(niche));
+      }
 
-    if (uniqueDates.length === 0) {
+      return false;
+    });
+
+    console.log(`Found ${relevantDates.length} relevant dates from ${allDates.length} total dates`);
+
+    if (relevantDates.length === 0) {
       return new Response(
         JSON.stringify({ 
           dates: [],
@@ -62,7 +66,7 @@ serve(async (req) => {
     }
 
     // Format dates for response
-    const formattedDates = uniqueDates.map(date => ({
+    const formattedDates = relevantDates.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo,
