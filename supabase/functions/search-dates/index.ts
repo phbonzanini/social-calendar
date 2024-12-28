@@ -26,7 +26,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Buscando todas as datas do banco de dados...');
+    console.log('Iniciando busca completa no banco de dados...');
 
     // Buscar TODAS as datas disponíveis
     const { data: allDates, error: dbError } = await supabase
@@ -38,49 +38,58 @@ serve(async (req) => {
       throw dbError;
     }
 
-    console.log(`Total de datas encontradas no banco: ${allDates.length}`);
+    if (!allDates || allDates.length === 0) {
+      console.log('Nenhuma data encontrada no banco de dados');
+      return new Response(
+        JSON.stringify({ dates: [] }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+      );
+    }
 
-    // Filtrar as datas baseado nos nichos selecionados
+    console.log(`Total de datas no banco: ${allDates.length}`);
+
+    // Converter nichos selecionados para lowercase para comparação
+    const selectedNichesLower = niches.map(n => n.toLowerCase());
+
+    // Filtrar as datas relevantes
     const relevantDates = allDates.filter(date => {
+      // Log para debug
+      console.log(`Analisando data: ${date.data} - ${date.descrição}`);
+      console.log(`Tipo: ${date.tipo}`);
+      console.log(`Nichos associados:`, date.niches);
+
       // Sempre incluir feriados nacionais
       if (date.tipo === 'holiday') {
-        console.log(`Incluindo feriado: ${date.descrição}`);
+        console.log(`✓ Incluindo feriado nacional: ${date.descrição}`);
         return true;
       }
 
-      // Para datas com nichos específicos
-      if (date.niches && Array.isArray(date.niches)) {
-        // Converter os nichos para lowercase para comparação
+      // Verificar datas específicas para os nichos selecionados
+      if (date.niches && Array.isArray(date.niches) && date.niches.length > 0) {
         const dateNichesLower = date.niches.map(n => n.toLowerCase());
-        const selectedNichesLower = niches.map(n => n.toLowerCase());
-
-        // Verificar se há interseção entre os nichos da data e os selecionados
-        const hasMatchingNiche = dateNichesLower.some(niche => 
+        const matchingNiches = dateNichesLower.filter(niche => 
           selectedNichesLower.includes(niche)
         );
 
-        if (hasMatchingNiche) {
-          console.log(`Data específica encontrada para nicho:`, {
-            data: date.data,
-            descricao: date.descrição,
-            nichos: date.niches
-          });
+        if (matchingNiches.length > 0) {
+          console.log(`✓ Data específica incluída para nichos: ${matchingNiches.join(', ')}`);
           return true;
         }
       }
 
-      // Incluir datas comemorativas gerais (sem nichos específicos)
+      // Incluir datas comemorativas gerais
       if (date.tipo === 'commemorative' && (!date.niches || date.niches.length === 0)) {
-        console.log(`Incluindo data comemorativa geral: ${date.descrição}`);
+        console.log(`✓ Incluindo data comemorativa geral: ${date.descrição}`);
         return true;
       }
 
+      console.log(`✗ Data não incluída: ${date.descrição}`);
       return false;
     });
 
     console.log(`Datas relevantes encontradas: ${relevantDates.length}`);
 
-    // Remover duplicatas baseado na data e descrição
+    // Remover possíveis duplicatas
     const uniqueDates = Array.from(new Map(
       relevantDates.map(date => [date.data + date.descrição, date])
     ).values());
@@ -98,7 +107,7 @@ serve(async (req) => {
     // Ordenar datas cronologicamente
     formattedDates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-    console.log('Retornando datas formatadas:', formattedDates);
+    console.log('Datas formatadas e ordenadas:', formattedDates);
 
     return new Response(
       JSON.stringify({ dates: formattedDates }), 
