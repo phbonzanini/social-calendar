@@ -16,7 +16,7 @@ serve(async (req) => {
   try {
     const { niches, allDates } = await req.json();
 
-    console.log('Analisando datas para os nichos:', niches);
+    console.log('Iniciando análise para os nichos:', niches);
     console.log('Total de datas disponíveis:', allDates.length);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
@@ -34,26 +34,29 @@ serve(async (req) => {
     const prompt = `
       Você é um especialista em marketing digital e calendário de conteúdo para redes sociais.
       
-      Analise as datas comemorativas fornecidas e identifique quais são relevantes 
+      Analise cuidadosamente as datas comemorativas fornecidas e identifique quais são relevantes 
       para os seguintes nichos de negócio: ${niches.join(', ')}.
 
-      Para cada data, considere:
+      Para cada data, avalie:
       1. Relevância direta para vendas e promoções
       2. Oportunidades de marketing de conteúdo
       3. Engajamento em redes sociais
       4. Campanhas sazonais
-      5. Conexões indiretas que podem ser aproveitadas para marketing
+      5. Conexões indiretas que podem ser aproveitadas
+
+      Exemplos de conexões:
+      - Para o nicho "pets": Dia das Mães (donos de pets consideram seus animais como filhos)
+      - Para o nicho "moda": Dia do Trabalho (looks para ambiente profissional)
+      - Para o nicho "educação": Black Friday (promoções em cursos)
+      - Para o nicho "saúde": Carnaval (cuidados com a saúde durante a folia)
 
       Datas para análise:
       ${JSON.stringify(allDates, null, 2)}
 
-      Retorne TODAS as datas que possam ser aproveitadas para marketing digital, mesmo que a conexão seja indireta.
-      Por exemplo:
-      - Para o nicho "saúde", datas como "Dia Mundial da Alimentação" são relevantes
-      - Para o nicho "moda", datas como "Dia das Mães" são oportunidades de vendas
-      - Para o nicho "educação", datas como "Volta às aulas" são essenciais
+      IMPORTANTE: Retorne TODAS as datas que possam ser aproveitadas, mesmo que a conexão seja indireta.
+      Seja criativo e pense em todas as possibilidades de marketing digital.
 
-      Retorne apenas um array JSON com as datas selecionadas, mantendo este formato para cada data:
+      Retorne apenas um array JSON com as datas relevantes, mantendo exatamente este formato para cada data:
       {
         "data": "2025-01-01",
         "descrição": "Descrição original da data",
@@ -63,7 +66,7 @@ serve(async (req) => {
       Retorne apenas o array JSON, sem texto adicional.
     `;
 
-    console.log('Enviando prompt para análise do GPT');
+    console.log('Enviando prompt para análise');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -76,14 +79,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'Você é um especialista em marketing digital que analisa datas comemorativas para criar oportunidades de marketing e vendas. Seja criativo ao identificar conexões entre datas e nichos de negócio.'
+            content: 'Você é um especialista em marketing digital que analisa datas comemorativas para criar oportunidades de marketing e vendas. Seja criativo e abrangente ao identificar conexões entre datas e nichos de negócio.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        temperature: 0.7,
+        temperature: 0.8,
       }),
     });
 
@@ -106,23 +109,31 @@ serve(async (req) => {
       
       // Tenta encontrar e parsear o array JSON na resposta
       const match = content.match(/\[[\s\S]*\]/);
-      if (match) {
-        relevantDates = JSON.parse(match[0]);
-        console.log('Datas relevantes encontradas:', relevantDates.length);
-        
-        // Valida e filtra as datas retornadas
-        relevantDates = relevantDates.filter(date => 
-          date.data && 
-          date.descrição && 
-          ['commemorative', 'holiday', 'optional'].includes(date.tipo)
-        );
-        
-        console.log('Datas válidas após filtro:', relevantDates.length);
-      } else {
+      if (!match) {
+        console.error('Formato de resposta inválido:', content);
         throw new Error('Formato de resposta inválido');
       }
+
+      relevantDates = JSON.parse(match[0]);
+      console.log('Datas relevantes encontradas:', relevantDates.length);
+      
+      // Valida e filtra as datas retornadas
+      relevantDates = relevantDates.filter(date => {
+        const isValid = date.data && 
+          date.descrição && 
+          ['commemorative', 'holiday', 'optional'].includes(date.tipo);
+        
+        if (!isValid) {
+          console.log('Data inválida encontrada:', date);
+        }
+        return isValid;
+      });
+      
+      console.log('Datas válidas após filtro:', relevantDates.length);
+      
     } catch (error) {
       console.error('Erro ao processar resposta do GPT:', error);
+      console.error('Conteúdo que causou erro:', data.choices[0].message.content);
       throw new Error('Erro ao processar datas relevantes');
     }
 
