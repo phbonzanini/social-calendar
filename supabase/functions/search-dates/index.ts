@@ -26,30 +26,27 @@ serve(async (req) => {
 
     console.log('Attempting to fetch dates for niches:', niches);
 
-    // Usando uma abordagem mais segura com filter
-    const { data, error } = await supabase
+    // Build the query conditions for each niche
+    const query = supabase
       .from('datas_2025')
-      .select('data, descrição, tipo')
-      .or(niches.map(niche => [
-        { "nicho 1": niche },
-        { "nicho 2": niche },
-        { "nicho 3": niche }
-      ]).flat())
+      .select('*')
+      .or(niches.map(niche => 
+        `nicho 1.eq.${niche},nicho 2.eq.${niche},nicho 3.eq.${niche}`
+      ).join(','))
       .order('data');
+
+    console.log('Executing query:', query);
+    
+    const { data, error } = await query;
 
     if (error) {
       console.error('Database error:', error);
-      throw error;
-    }
-
-    console.log('Query results:', data ? data.length : 0, 'records found');
-    console.log('Sample of results:', data?.slice(0, 2));
-
-    if (!data || data.length === 0) {
-      console.log('No dates found, fetching default holidays...');
+      
+      // Fallback to holidays if no niche-specific dates are found
+      console.log('Fetching default holidays...');
       const { data: holidays, error: holidayError } = await supabase
         .from('datas_2025')
-        .select('data, descrição, tipo')
+        .select('*')
         .eq('tipo', 'holiday')
         .order('data');
 
@@ -58,32 +55,17 @@ serve(async (req) => {
         throw holidayError;
       }
 
-      console.log('Found holidays:', holidays ? holidays.length : 0);
-
-      const formattedHolidays = (holidays || []).map(date => ({
-        date: date.data,
-        title: date.descrição,
-        category: date.tipo,
-        description: date.descrição
-      }));
-
+      console.log('Found holidays:', holidays?.length || 0);
       return new Response(
-        JSON.stringify({ dates: formattedHolidays }),
+        JSON.stringify({ dates: holidays || [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const formattedDates = data.map(date => ({
-      date: date.data,
-      title: date.descrição,
-      category: date.tipo,
-      description: date.descrição
-    }));
-
-    console.log('Returning formatted dates:', formattedDates.length);
-
+    console.log('Query results:', data?.length || 0, 'records found');
+    
     return new Response(
-      JSON.stringify({ dates: formattedDates }),
+      JSON.stringify({ dates: data || [] }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
