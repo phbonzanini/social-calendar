@@ -26,9 +26,9 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Querying database for dates...');
+    console.log('Fetching all dates from database...');
 
-    // Buscar todas as datas disponíveis
+    // Fetch ALL dates from the database
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
@@ -38,40 +38,60 @@ serve(async (req) => {
       throw dbError;
     }
 
-    // Filtrar as datas baseado nos nichos selecionados e datas comemorativas/feriados
+    console.log(`Found ${allDates.length} total dates in database`);
+
+    // Filter dates based on niches and always include holidays/commemorative dates
     const relevantDates = allDates.filter(date => {
-      // Sempre incluir feriados e datas comemorativas gerais
-      if (date.tipo === 'holiday' || date.tipo === 'commemorative') {
+      // Always include holidays
+      if (date.tipo === 'holiday') {
         return true;
       }
 
-      // Verificar se a data tem nichos e se algum deles corresponde aos selecionados
+      // For dates with niches, check if any selected niche matches
       if (date.niches && Array.isArray(date.niches)) {
-        return date.niches.some(niche => niches.includes(niche));
+        const hasMatchingNiche = date.niches.some(niche => 
+          niches.includes(niche.toLowerCase())
+        );
+        
+        if (hasMatchingNiche) {
+          console.log(`Found matching date for niches:`, {
+            date: date.data,
+            description: date.descrição,
+            matchingNiches: date.niches.filter(niche => 
+              niches.includes(niche.toLowerCase())
+            )
+          });
+          return true;
+        }
+      }
+
+      // Include general commemorative dates that don't have specific niches
+      if (date.tipo === 'commemorative' && (!date.niches || date.niches.length === 0)) {
+        return true;
       }
 
       return false;
     });
 
-    console.log(`Found ${relevantDates.length} relevant dates from ${allDates.length} total dates`);
+    console.log(`Filtered down to ${relevantDates.length} relevant dates`);
 
-    if (relevantDates.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          dates: [],
-          message: 'Nenhuma data encontrada para os nichos selecionados.' 
-        }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
-      );
-    }
+    // Remove duplicates based on date and title
+    const uniqueDates = Array.from(new Map(
+      relevantDates.map(date => [date.data + date.descrição, date])
+    ).values());
+
+    console.log(`After removing duplicates: ${uniqueDates.length} dates`);
 
     // Format dates for response
-    const formattedDates = relevantDates.map(date => ({
+    const formattedDates = uniqueDates.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo,
       description: date.descrição,
     }));
+
+    // Sort dates chronologically
+    formattedDates.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     console.log('Returning formatted dates:', formattedDates);
 
