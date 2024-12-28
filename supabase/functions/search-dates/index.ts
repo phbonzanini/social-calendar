@@ -26,23 +26,31 @@ serve(async (req) => {
 
     console.log('Attempting to fetch dates for niches:', niches);
 
-    // Build the query conditions for each niche
-    const query = supabase
+    // Construindo a query de forma mais simples e direta
+    let query = supabase
       .from('datas_2025')
-      .select('*')
-      .or(niches.map(niche => 
-        `nicho 1.eq.${niche},nicho 2.eq.${niche},nicho 3.eq.${niche}`
-      ).join(','))
-      .order('data');
+      .select('*');
 
-    console.log('Executing query:', query);
+    // Adicionando condições OR para cada nicho
+    const conditions = niches.map(niche => {
+      return `nicho1.eq.${niche},nicho2.eq.${niche},nicho3.eq.${niche}`;
+    }).join(',');
+
+    if (conditions) {
+      query = query.or(conditions);
+    }
+
+    // Ordenando por data
+    query = query.order('data');
+
+    console.log('Executing query with conditions:', conditions);
     
     const { data, error } = await query;
 
     if (error) {
       console.error('Database error:', error);
       
-      // Fallback to holidays if no niche-specific dates are found
+      // Fallback para feriados se nenhuma data específica for encontrada
       console.log('Fetching default holidays...');
       const { data: holidays, error: holidayError } = await supabase
         .from('datas_2025')
@@ -56,16 +64,33 @@ serve(async (req) => {
       }
 
       console.log('Found holidays:', holidays?.length || 0);
+      
+      // Formatando as datas dos feriados
+      const formattedHolidays = holidays?.map(date => ({
+        date: date.data,
+        title: date.descrição,
+        category: date.tipo,
+        description: date.descrição
+      })) || [];
+
       return new Response(
-        JSON.stringify({ dates: holidays || [] }),
+        JSON.stringify({ dates: formattedHolidays }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log('Query results:', data?.length || 0, 'records found');
     
+    // Formatando todas as datas encontradas
+    const formattedDates = data?.map(date => ({
+      date: date.data,
+      title: date.descrição,
+      category: date.tipo,
+      description: date.descrição
+    })) || [];
+
     return new Response(
-      JSON.stringify({ dates: data || [] }),
+      JSON.stringify({ dates: formattedDates }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
