@@ -116,7 +116,7 @@ export const NicheSelector = () => {
       <Button
         onClick={handleGenerateCalendar}
         disabled={selectedNiches.length === 0}
-        className="w-full"
+        className="w-full text-white"
       >
         <Calendar className="mr-2" />
         Gerar Calendário

@@ -25,7 +25,7 @@ const getDateTypeLabel = (type: CalendarDate["category"]) => {
     case "optional":
       return "Data Opcional";
     default:
-      return "Outro";
+      return "Tipo da Data";
   }
 };
 
@@ -86,7 +86,7 @@ export const CalendarCard = ({ date, index }: CalendarCardProps) => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
     >
-      <Card className="h-full">
+      <Card className="h-full bg-[#F1F0FB]">
         <CardContent className="p-6">
           <div className="flex flex-col gap-4">
             <div>
