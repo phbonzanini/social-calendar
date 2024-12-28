@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const { niches } = await req.json();
-    console.log('Nichos recebidos:', niches);
+    console.log('Received niches:', niches);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Nichos inválidos ou não fornecidos');
@@ -24,27 +24,23 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Query simplificada usando OR diretamente no SQL
-    const { data: dates, error: dbError } = await supabase
+    console.log('Executing query for niches:', niches);
+
+    const { data, error } = await supabase
       .from('datas_2025')
       .select('*')
       .or(`nicho 1.in.(${niches.map(n => `'${n}'`).join(',')}),nicho 2.in.(${niches.map(n => `'${n}'`).join(',')}),nicho 3.in.(${niches.map(n => `'${n}'`).join(',')})`)
       .order('data');
 
-    console.log('Query executada');
-    
-    if (dbError) {
-      console.error('Erro na consulta:', dbError);
-      throw dbError;
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
     }
 
-    console.log('Datas encontradas:', dates?.length || 0);
-    if (dates && dates.length > 0) {
-      console.log('Exemplo de primeira data:', dates[0]);
-    }
+    console.log('Query results:', data ? data.length : 0, 'records found');
 
-    if (!dates || dates.length === 0) {
-      console.log('Nenhuma data específica encontrada, buscando feriados...');
+    if (!data || data.length === 0) {
+      console.log('No dates found, fetching default holidays...');
       const { data: holidays, error: holidayError } = await supabase
         .from('datas_2025')
         .select('*')
@@ -52,12 +48,12 @@ serve(async (req) => {
         .order('data');
 
       if (holidayError) {
-        console.error('Erro ao buscar feriados:', holidayError);
+        console.error('Error fetching holidays:', holidayError);
         throw holidayError;
       }
 
-      console.log('Feriados encontrados:', holidays?.length || 0);
-      
+      console.log('Found holidays:', holidays ? holidays.length : 0);
+
       const formattedHolidays = (holidays || []).map(date => ({
         date: date.data,
         title: date.descrição,
@@ -66,27 +62,27 @@ serve(async (req) => {
       }));
 
       return new Response(
-        JSON.stringify({ dates: formattedHolidays }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+        JSON.stringify({ dates: formattedHolidays }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const formattedDates = dates.map(date => ({
+    const formattedDates = data.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo,
       description: date.descrição
     }));
 
-    console.log('Total de datas formatadas:', formattedDates.length);
+    console.log('Returning formatted dates:', formattedDates.length);
 
     return new Response(
-      JSON.stringify({ dates: formattedDates }), 
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+      JSON.stringify({ dates: formattedDates }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Erro na função:', error);
+    console.error('Function error:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
