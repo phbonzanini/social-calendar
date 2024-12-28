@@ -20,55 +20,93 @@ serve(async (req) => {
       throw new Error('Nichos inválidos ou não fornecidos');
     }
 
-    const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY')!,
-    });
+    // Primeiro, buscar todas as datas do Supabase
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const prompt = `Gere uma lista de 10 datas comemorativas relevantes para os seguintes nichos: ${niches.join(', ')}. 
-    Para cada data, forneça:
-    1. A data no formato YYYY-MM-DD (use o ano 2025)
-    2. O título do evento
-    3. Uma breve descrição
-    4. A categoria (use apenas: commemorative, holiday, ou optional)
-    
-    Responda apenas em formato JSON, seguindo este exemplo:
-    [
-      {
-        "date": "2025-01-01",
-        "title": "Dia Mundial da Paz",
-        "description": "Celebração internacional da paz e harmonia",
-        "category": "holiday"
-      }
-    ]`;
+    const { data: allDates, error: dbError } = await supabase
+      .from('datas_2025')
+      .select('*')
+      .or(niches.map(niche => 
+        `"nicho 1".eq.'${niche}',` +
+        `"nicho 2".eq.'${niche}',` +
+        `"nicho 3".eq.'${niche}'`
+      ).join(','));
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um especialista em marketing e datas comemorativas. Gere apenas datas relevantes e reais, sem criar datas fictícias."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      response_format: { type: "json_object" }
-    });
-
-    const response = completion.choices[0].message.content;
-    console.log('OpenAI response:', response);
-
-    if (!response) {
-      throw new Error('Resposta vazia do OpenAI');
+    if (dbError) {
+      console.error('Erro ao buscar datas do Supabase:', dbError);
+      throw dbError;
     }
 
-    const parsedDates = JSON.parse(response).dates || [];
-    console.log('Parsed dates:', parsedDates);
+    console.log('Datas encontradas no Supabase:', allDates);
+
+    // Se não encontrou datas no Supabase, usar o ChatGPT para ajudar a filtrar
+    if (!allDates || allDates.length === 0) {
+      console.log('Nenhuma data encontrada no Supabase, usando ChatGPT para assistência');
+      
+      const openai = new OpenAI({
+        apiKey: Deno.env.get('OPENAI_API_KEY')!,
+      });
+
+      const prompt = `Com base nas datas comemorativas do ano de 2025 disponíveis no banco de dados, 
+      selecione as datas mais relevantes para os seguintes nichos: ${niches.join(', ')}. 
+      
+      Formate a resposta como um array JSON com objetos contendo:
+      - date (YYYY-MM-DD)
+      - title (string)
+      - description (string)
+      - category (commemorative, holiday, ou optional)
+      
+      Use apenas datas reais e relevantes para os nichos mencionados.`;
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "Você é um especialista em marketing e datas comemorativas. Ajude a selecionar as datas mais relevantes do banco de dados para os nichos específicos."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+        response_format: { type: "json_object" }
+      });
+
+      const response = completion.choices[0].message.content;
+      console.log('Resposta do ChatGPT:', response);
+
+      if (!response) {
+        throw new Error('Resposta vazia do ChatGPT');
+      }
+
+      const parsedDates = JSON.parse(response).dates || [];
+      console.log('Datas processadas:', parsedDates);
+
+      return new Response(
+        JSON.stringify({ dates: parsedDates }),
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Content-Type': 'application/json'
+          } 
+        }
+      );
+    }
+
+    // Formatar as datas do Supabase
+    const formattedDates = allDates.map(date => ({
+      date: date.data,
+      title: date.descrição,
+      category: date.tipo || 'commemorative', // Valor padrão caso não exista
+      description: date.descrição
+    }));
 
     return new Response(
-      JSON.stringify({ dates: parsedDates }),
+      JSON.stringify({ dates: formattedDates }),
       { 
         headers: { 
           ...corsHeaders,
@@ -78,7 +116,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Function error:', error);
+    console.error('Erro na função:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
