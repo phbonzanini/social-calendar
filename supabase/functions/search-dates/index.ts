@@ -25,13 +25,15 @@ serve(async (req) => {
 
     console.log('Attempting to fetch dates for niches:', niches);
 
-    // Usando uma query mais simples com or()
-    const { data, error } = await supabase
+    // Construindo a query básica
+    let { data, error } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(`"nicho 1".in.(${niches.map(n => `'${n}'`).join(',')}),` +
-          `"nicho 2".in.(${niches.map(n => `'${n}'`).join(',')}),` +
-          `"nicho 3".in.(${niches.map(n => `'${n}'`).join(',')})`)
+      .or(niches.map(niche => 
+        `"nicho 1".eq.'${niche}',` +
+        `"nicho 2".eq.'${niche}',` +
+        `"nicho 3".eq.'${niche}'`
+      ).join(','))
       .order('data');
 
     if (error) {
@@ -39,8 +41,8 @@ serve(async (req) => {
       throw error;
     }
 
-    console.log('Query results:', data?.length || 0, 'records found');
-    
+    console.log('Initial query results:', data?.length || 0, 'records found');
+
     // Se não encontrou datas específicas, busca feriados
     if (!data || data.length === 0) {
       console.log('No specific dates found, fetching holidays...');
@@ -55,28 +57,19 @@ serve(async (req) => {
         throw holidayError;
       }
 
+      data = holidays;
       console.log('Found holidays:', holidays?.length || 0);
-
-      const formattedHolidays = holidays?.map(date => ({
-        date: date.data,
-        title: date.descrição,
-        category: date.tipo,
-        description: date.descrição
-      })) || [];
-
-      return new Response(
-        JSON.stringify({ dates: formattedHolidays }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
     }
 
     // Formata as datas encontradas
-    const formattedDates = data.map(date => ({
+    const formattedDates = (data || []).map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo,
       description: date.descrição
     }));
+
+    console.log('Returning formatted dates:', formattedDates.length);
 
     return new Response(
       JSON.stringify({ dates: formattedDates }),
