@@ -23,11 +23,11 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
-    // First try with direct database query using the new niches column
+    // Primeiro, tenta buscar diretamente no banco usando a coluna niches
     const { data: dbData, error: dbError } = await supabase
       .from("datas_2025")
       .select("*")
-      .overlaps('niches', niches)
+      .contains('niches', niches)
       .order("data");
 
     if (dbError) {
@@ -45,7 +45,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       }));
     }
 
-    // If no results from direct query, try with GPT
+    // Se não encontrar resultados no banco, tenta com GPT
     console.log("Nenhuma data encontrada no banco, tentando com GPT");
     
     const { data: gptResponse, error: gptError } = await supabase.functions.invoke(
