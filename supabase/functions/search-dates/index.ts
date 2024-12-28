@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from 'https://esm.sh/@supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,24 +24,17 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Construct the query conditions for each niche column
-    const nicheConditions = niches.map(niche => 
-      `"nicho 1" = '${niche}' OR "nicho 2" = '${niche}' OR "nicho 3" = '${niche}'`
-    ).join(' OR ');
+    console.log('Attempting to fetch dates for niches:', niches);
 
-    const query = `
-      SELECT DISTINCT data, descrição, tipo
-      FROM datas_2025
-      WHERE ${nicheConditions}
-      ORDER BY data;
-    `;
-
-    console.log('Executing query:', query);
-
+    // Usando uma abordagem mais segura com filter
     const { data, error } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
-      .or(nicheConditions)
+      .or(niches.map(niche => [
+        { "nicho 1": niche },
+        { "nicho 2": niche },
+        { "nicho 3": niche }
+      ]).flat())
       .order('data');
 
     if (error) {
