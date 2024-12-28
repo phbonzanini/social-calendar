@@ -34,36 +34,38 @@ serve(async (req) => {
     const prompt = `
       Você é um especialista em marketing digital e calendário de conteúdo para redes sociais.
       
-      Analise cuidadosamente as datas comemorativas fornecidas e identifique quais são relevantes 
-      para os seguintes nichos de negócio: ${niches.join(', ')}.
-
+      Analise as datas comemorativas fornecidas e identifique quais são relevantes para os seguintes nichos: ${niches.join(', ')}.
+      
+      IMPORTANTE: Seja criativo e considere TODAS as possibilidades de marketing, mesmo que a conexão seja indireta.
+      
+      Exemplos de conexões indiretas que DEVEM ser consideradas:
+      - Para "pets": Dia das Mães (donos consideram pets como filhos)
+      - Para "moda": Dia do Trabalho (looks profissionais)
+      - Para "educação": Black Friday (promoções em cursos)
+      - Para "saúde": Carnaval (dicas de saúde)
+      - Para "tech": Dia dos Pais (presentes tech)
+      - Para "food": Dia do Trabalho (delivery para escritórios)
+      
       Para cada data, avalie:
-      1. Relevância direta para vendas e promoções
+      1. Potencial de vendas diretas
       2. Oportunidades de marketing de conteúdo
       3. Engajamento em redes sociais
       4. Campanhas sazonais
-      5. Conexões indiretas que podem ser aproveitadas
-
-      Exemplos de conexões:
-      - Para o nicho "pets": Dia das Mães (donos de pets consideram seus animais como filhos)
-      - Para o nicho "moda": Dia do Trabalho (looks para ambiente profissional)
-      - Para o nicho "educação": Black Friday (promoções em cursos)
-      - Para o nicho "saúde": Carnaval (cuidados com a saúde durante a folia)
-
+      5. Conexões indiretas com o nicho
+      
       Datas para análise:
       ${JSON.stringify(allDates, null, 2)}
-
-      IMPORTANTE: Retorne TODAS as datas que possam ser aproveitadas, mesmo que a conexão seja indireta.
-      Seja criativo e pense em todas as possibilidades de marketing digital.
-
-      Retorne apenas um array JSON com as datas relevantes, mantendo exatamente este formato para cada data:
+      
+      RETORNE APENAS um array JSON com TODAS as datas que possam ser aproveitadas.
+      Cada data deve seguir exatamente este formato:
       {
         "data": "2025-01-01",
         "descrição": "Descrição original da data",
         "tipo": "commemorative/holiday/optional"
       }
-
-      Retorne apenas o array JSON, sem texto adicional.
+      
+      RETORNE APENAS O ARRAY JSON, sem texto adicional.
+      SEJA CRIATIVO e INCLUA TODAS as datas que possam ter qualquer conexão com os nichos!
     `;
 
     console.log('Enviando prompt para análise');
