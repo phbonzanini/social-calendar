@@ -24,7 +24,7 @@ serve(async (req) => {
 
     // Buscar todas as datas do banco
     const { data: allDates, error: dbError } = await supabase
-      .from('dastas_2025')
+      .from('datas_2025')
       .select('*')
       .order('data');
 
@@ -65,7 +65,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           { 
             role: 'system', 
@@ -101,7 +101,7 @@ serve(async (req) => {
 
     // Buscar as datas relevantes
     const { data: relevantDates, error: finalError } = await supabase
-      .from('dastas_2025')
+      .from('datas_2025')
       .select('*')
       .in('id', relevantIds)
       .order('data');

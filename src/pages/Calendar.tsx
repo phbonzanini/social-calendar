@@ -49,7 +49,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
     console.log("Nenhuma data encontrada via GPT, usando busca padrão");
 
     const { data: fallbackData, error: fallbackError } = await supabase
-      .from("dastas_2025")
+      .from("datas_2025")
       .select("*")
       .overlaps("niches", niches)
       .order("data");

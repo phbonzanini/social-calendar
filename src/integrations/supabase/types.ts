@@ -9,35 +9,12 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      calendarios_sazonais: {
-        Row: {
-          created_at: string | null
-          datas_selecionadas: number[]
-          id: number
-          nome: string
-        }
-        Insert: {
-          created_at?: string | null
-          datas_selecionadas: number[]
-          id?: number
-          nome: string
-        }
-        Update: {
-          created_at?: string | null
-          datas_selecionadas?: number[]
-          id?: number
-          nome?: string
-        }
-        Relationships: []
-      }
-      dastas_2025: {
+      datas_2025: {
         Row: {
           created_at: string
           data: string | null
           descrição: string | null
           id: number
-          needs_review: boolean | null
-          niches: string[] | null
           tipo: string | null
         }
         Insert: {
@@ -45,8 +22,6 @@ export type Database = {
           data?: string | null
           descrição?: string | null
           id?: number
-          needs_review?: boolean | null
-          niches?: string[] | null
           tipo?: string | null
         }
         Update: {
@@ -54,8 +29,6 @@ export type Database = {
           data?: string | null
           descrição?: string | null
           id?: number
-          needs_review?: boolean | null
-          niches?: string[] | null
           tipo?: string | null
         }
         Relationships: []
