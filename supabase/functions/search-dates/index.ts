@@ -1,6 +1,7 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import OpenAI from 'https://esm.sh/openai@4.28.0';
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,7 @@ serve(async (req) => {
 
   try {
     const { niches } = await req.json();
-    console.log('Received niches:', niches);
+    console.log('Buscando datas para os nichos:', niches);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Nichos inválidos ou não fornecidos');
@@ -25,88 +26,81 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Buscar todas as datas da tabela datas_2025
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('*')
-      .or(niches.map(niche => 
-        `"nicho 1".eq.'${niche}',` +
-        `"nicho 2".eq.'${niche}',` +
-        `"nicho 3".eq.'${niche}'`
-      ).join(','));
+      .select('*');
 
     if (dbError) {
       console.error('Erro ao buscar datas do Supabase:', dbError);
       throw dbError;
     }
 
-    console.log('Datas encontradas no Supabase:', allDates);
-
-    // Se não encontrou datas no Supabase, usar o ChatGPT para ajudar a filtrar
     if (!allDates || allDates.length === 0) {
-      console.log('Nenhuma data encontrada no Supabase, usando ChatGPT para assistência');
-      
-      const openai = new OpenAI({
-        apiKey: Deno.env.get('OPENAI_API_KEY')!,
-      });
-
-      const prompt = `Com base nas datas comemorativas do ano de 2025 disponíveis no banco de dados, 
-      selecione as datas mais relevantes para os seguintes nichos: ${niches.join(', ')}. 
-      
-      Formate a resposta como um array JSON com objetos contendo:
-      - date (YYYY-MM-DD)
-      - title (string)
-      - description (string)
-      - category (commemorative, holiday, ou optional)
-      
-      Use apenas datas reais e relevantes para os nichos mencionados.`;
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: "Você é um especialista em marketing e datas comemorativas. Ajude a selecionar as datas mais relevantes do banco de dados para os nichos específicos."
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-        response_format: { type: "json_object" }
-      });
-
-      const response = completion.choices[0].message.content;
-      console.log('Resposta do ChatGPT:', response);
-
-      if (!response) {
-        throw new Error('Resposta vazia do ChatGPT');
-      }
-
-      const parsedDates = JSON.parse(response).dates || [];
-      console.log('Datas processadas:', parsedDates);
-
+      console.log('Nenhuma data encontrada na tabela');
       return new Response(
-        JSON.stringify({ dates: parsedDates }),
-        { 
-          headers: { 
-            ...corsHeaders,
-            'Content-Type': 'application/json'
-          } 
-        }
+        JSON.stringify({ dates: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Formatar as datas do Supabase
-    const formattedDates = allDates.map(date => ({
+    // Usar o ChatGPT para filtrar as datas mais relevantes para os nichos selecionados
+    const openai = new OpenAI({
+      apiKey: Deno.env.get('OPENAI_API_KEY')!,
+    });
+
+    // Converter as datas do Supabase para o formato que vamos usar
+    const availableDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
-      category: date.tipo || 'commemorative', // Valor padrão caso não exista
-      description: date.descrição
+      description: date.descrição,
+      category: date.tipo || 'commemorative',
+      nicho1: date["nicho 1"],
+      nicho2: date["nicho 2"],
+      nicho3: date["nicho 3"]
     }));
 
+    const prompt = `Aqui está uma lista de datas comemorativas da nossa base de dados:
+    ${JSON.stringify(availableDates, null, 2)}
+
+    Por favor, analise estas datas e selecione APENAS as que são relevantes para os seguintes nichos: ${niches.join(', ')}.
+    Uma data é relevante se um dos nichos solicitados aparecer em qualquer uma das colunas nicho1, nicho2 ou nicho3.
+
+    Retorne apenas as datas relevantes em formato JSON, mantendo apenas os campos:
+    - date (YYYY-MM-DD)
+    - title (string)
+    - description (string)
+    - category (commemorative, holiday, ou optional)
+
+    Não crie novas datas, use APENAS as datas fornecidas acima.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "Você é um assistente especializado em filtrar datas comemorativas. Sua função é analisar datas existentes e selecionar apenas as relevantes para os nichos especificados. Não crie novas datas."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      response_format: { type: "json_object" }
+    });
+
+    const response = completion.choices[0].message.content;
+    console.log('Datas encontradas:', response);
+
+    if (!response) {
+      throw new Error('Resposta vazia do ChatGPT');
+    }
+
+    const filteredDates = JSON.parse(response).dates || [];
+
     return new Response(
-      JSON.stringify({ dates: formattedDates }),
+      JSON.stringify({ dates: filteredDates }),
       { 
         headers: { 
           ...corsHeaders,
