@@ -19,16 +19,16 @@ serve(async (req) => {
 
   try {
     const { niches } = await req.json();
-    console.log('Received niches:', niches);
+    console.log('Recebendo requisição para nichos:', niches);
     
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
-      throw new Error('Invalid or empty niches array');
+      throw new Error('Nichos inválidos ou vazios');
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
     try {
-      // Prepare the prompt for GPT
+      // Prepara o prompt para o GPT
       const prompt = `
         Analise estas datas comemorativas e identifique quais são mais relevantes para os seguintes nichos de negócio: ${niches.join(', ')}.
         
@@ -38,9 +38,8 @@ serve(async (req) => {
         Responda APENAS com os números, sem texto adicional.
       `;
 
-      console.log('Sending request to GPT with prompt');
+      console.log('Enviando requisição para GPT');
 
-      // Call OpenAI API
       const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -48,7 +47,7 @@ serve(async (req) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4',
+          model: 'gpt-4o-mini',
           messages: [
             { 
               role: 'system', 
@@ -61,45 +60,46 @@ serve(async (req) => {
       });
 
       if (!gptResponse.ok) {
-        throw new Error(`GPT API error: ${await gptResponse.text()}`);
+        console.error('Erro na resposta do GPT:', await gptResponse.text());
+        throw new Error('Erro na API do GPT');
       }
 
       const gptData = await gptResponse.json();
-      console.log('GPT response received:', gptData);
+      console.log('Resposta do GPT recebida:', gptData);
 
       if (!gptData.choices?.[0]?.message?.content) {
-        throw new Error('Invalid GPT response format');
+        throw new Error('Formato de resposta do GPT inválido');
       }
 
-      // Get dates from database based on niches
+      // Busca as datas no banco
       const { data: dates, error: dbError } = await supabase
         .from('datas_2025')
         .select('*')
         .order('data');
 
       if (dbError) {
-        console.error('Database error:', dbError);
+        console.error('Erro no banco de dados:', dbError);
         throw dbError;
       }
 
       if (!dates || dates.length === 0) {
-        console.log('No dates found in database');
+        console.log('Nenhuma data encontrada no banco');
         return new Response(
           JSON.stringify({ dates: [] }), 
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
         );
       }
 
-      // Filter dates based on GPT response
+      // Filtra as datas com base na resposta do GPT
       const relevantIds = gptData.choices[0].message.content
         .split(',')
-        .map(id => parseInt(id.trim()))
-        .filter(id => !isNaN(id));
+        .map((id: string) => parseInt(id.trim()))
+        .filter((id: number) => !isNaN(id));
 
-      console.log('Relevant IDs from GPT:', relevantIds);
+      console.log('IDs relevantes do GPT:', relevantIds);
 
       const filteredDates = dates.filter(date => relevantIds.includes(date.id));
-      console.log('Filtered dates count:', filteredDates.length);
+      console.log('Total de datas filtradas:', filteredDates.length);
 
       return new Response(
         JSON.stringify({ dates: filteredDates }), 
@@ -107,9 +107,9 @@ serve(async (req) => {
       );
 
     } catch (gptError) {
-      console.error('GPT API error:', gptError);
+      console.error('Erro na API do GPT:', gptError);
       
-      // If GPT fails, use database filtering as fallback
+      // Se o GPT falhar, usa filtragem direta no banco como fallback
       const { data: fallbackDates, error: fallbackError } = await supabase
         .from('datas_2025')
         .select('*')
@@ -119,7 +119,7 @@ serve(async (req) => {
         throw fallbackError;
       }
 
-      // Simple keyword matching as fallback
+      // Filtragem simples por palavras-chave como fallback
       const filteredDates = fallbackDates.filter(date => {
         const description = date.descrição?.toLowerCase() || '';
         return niches.some(niche => 
@@ -128,7 +128,7 @@ serve(async (req) => {
         );
       });
 
-      console.log('Fallback filtered dates count:', filteredDates.length);
+      console.log('Total de datas encontradas no fallback:', filteredDates.length);
 
       return new Response(
         JSON.stringify({ dates: filteredDates }), 
@@ -137,7 +137,7 @@ serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Error in search-dates function:', error);
+    console.error('Erro na função search-dates:', error);
     return new Response(
       JSON.stringify({ error: error.message }), 
       { 

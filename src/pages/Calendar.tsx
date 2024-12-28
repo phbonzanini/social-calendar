@@ -23,7 +23,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
-    // Primeiro, tenta buscar diretamente no banco usando a coluna niches
+    // Primeiro, busca no banco de dados
     const { data: dbData, error: dbError } = await supabase
       .from("datas_2025")
       .select("*")
@@ -36,7 +36,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
     }
 
     if (dbData && dbData.length > 0) {
-      console.log("Datas encontradas no banco:", dbData.length);
+      console.log("Datas encontradas no banco:", dbData);
       return dbData.map((item) => ({
         date: item.data,
         title: item.descrição,
@@ -45,29 +45,29 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       }));
     }
 
-    // Se não encontrar resultados no banco, tenta com GPT
-    console.log("Nenhuma data encontrada no banco, tentando com GPT");
+    // Se não encontrar no banco, tenta com a função de busca
+    console.log("Nenhuma data encontrada no banco, tentando com função de busca");
     
-    const { data: gptResponse, error: gptError } = await supabase.functions.invoke(
+    const { data: searchData, error: searchError } = await supabase.functions.invoke(
       "search-dates",
       {
         body: { niches },
       }
     );
 
-    if (gptError) {
-      console.error("Erro na busca com GPT:", gptError);
-      throw gptError;
+    if (searchError) {
+      console.error("Erro na função de busca:", searchError);
+      throw searchError;
     }
 
-    if (!gptResponse?.dates || gptResponse.dates.length === 0) {
-      console.log("Nenhuma data encontrada via GPT");
+    if (!searchData?.dates || searchData.dates.length === 0) {
+      console.log("Nenhuma data encontrada na busca");
       return [];
     }
 
-    console.log("Datas encontradas via GPT:", gptResponse.dates.length);
+    console.log("Datas encontradas na busca:", searchData.dates);
     
-    return gptResponse.dates.map((item) => ({
+    return searchData.dates.map((item: any) => ({
       date: item.data,
       title: item.descrição,
       category: item.tipo as "commemorative" | "holiday" | "optional",
@@ -89,11 +89,11 @@ const Calendar = () => {
     queryKey: ["calendar-dates", selectedNiches],
     queryFn: () => fetchDatesForNiches(selectedNiches),
     meta: {
-      onError: () => {
+      onError: (error: Error) => {
+        console.error("Erro na query:", error);
         toast({
           title: "Erro ao carregar datas",
-          description:
-            "Não foi possível carregar as datas do calendário. Tente novamente mais tarde.",
+          description: "Não foi possível carregar as datas do calendário. Por favor, tente novamente.",
           variant: "destructive",
         });
       },
@@ -130,7 +130,7 @@ const Calendar = () => {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-red-500">
-          Erro ao carregar o calendário. Tente novamente.
+          Erro ao carregar o calendário. Por favor, tente novamente.
         </p>
       </div>
     );
