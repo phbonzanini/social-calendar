@@ -24,29 +24,8 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
-    const { data: dbData, error: dbError } = await supabase
-      .from("datas_2025")
-      .select("*")
-      .contains('niches', niches)
-      .order("data");
-
-    if (dbError) {
-      console.error("Erro na busca no banco:", dbError);
-      throw dbError;
-    }
-
-    if (dbData && dbData.length > 0) {
-      console.log("Datas encontradas no banco:", dbData);
-      return dbData.map((item) => ({
-        date: item.data,
-        title: item.descrição,
-        category: item.tipo as "commemorative" | "holiday" | "optional",
-        description: item.descrição,
-      }));
-    }
-
-    console.log("Nenhuma data encontrada no banco, tentando com função de busca");
-    
+    // Primeiro tentamos buscar da Edge Function que usa GPT para melhor relevância
+    console.log("Buscando datas via Edge Function");
     const { data: searchData, error: searchError } = await supabase.functions.invoke(
       "search-dates",
       {
@@ -56,16 +35,38 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
     if (searchError) {
       console.error("Erro na função de busca:", searchError);
-      throw searchError;
+      // Se falhar a busca via GPT, tentamos direto no banco
+      console.log("Fallback: buscando direto no banco");
+      const { data: dbData, error: dbError } = await supabase
+        .from("datas_2025")
+        .select("*")
+        .contains('niches', niches)
+        .order("data");
+
+      if (dbError) {
+        console.error("Erro na busca no banco:", dbError);
+        throw dbError;
+      }
+
+      if (!dbData || dbData.length === 0) {
+        console.log("Nenhuma data encontrada");
+        return [];
+      }
+
+      return dbData.map((item) => ({
+        date: item.data,
+        title: item.descrição,
+        category: item.tipo as "commemorative" | "holiday" | "optional",
+        description: item.descrição,
+      }));
     }
 
     if (!searchData?.dates || searchData.dates.length === 0) {
-      console.log("Nenhuma data encontrada na busca");
+      console.log("Nenhuma data encontrada na busca via GPT");
       return [];
     }
 
-    console.log("Datas encontradas na busca:", searchData.dates);
-    
+    console.log("Datas encontradas via GPT:", searchData.dates);
     return searchData.dates.map((item: any) => ({
       date: item.data,
       title: item.descrição,
