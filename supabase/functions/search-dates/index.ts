@@ -27,21 +27,31 @@ serve(async (req) => {
     }
 
     const prompt = `
-      Analise estas ${allDates.length} datas comemorativas e identifique as mais relevantes 
-      para os seguintes nichos de negócio: ${niches.join(', ')}.
+      Você é um especialista em marketing que analisa datas comemorativas para diferentes nichos de negócio.
+      
+      Analise as ${allDates.length} datas comemorativas fornecidas e identifique as mais relevantes 
+      para os seguintes nichos: ${niches.join(', ')}.
 
       Datas para análise:
       ${JSON.stringify(allDates, null, 2)}
 
-      Instruções:
-      1. Retorne APENAS as datas que têm uma conexão clara com os nichos selecionados
-      2. Considere tanto datas específicas quanto datas que podem ser adaptadas
+      Instruções importantes:
+      1. Retorne APENAS as datas que têm uma conexão clara e direta com os nichos selecionados
+      2. Para cada data, explique brevemente por que ela é relevante para o(s) nicho(s)
       3. Mantenha a estrutura original das datas (data, descrição, tipo)
-      4. Retorne no mínimo 5 e no máximo 15 datas mais relevantes
+      4. Retorne entre 5 e 15 datas mais relevantes
       5. Não modifique os campos originais
       6. Retorne apenas o array JSON com as datas selecionadas
 
-      Retorne apenas o array JSON com as datas selecionadas, sem texto adicional.
+      Formato da resposta:
+      [
+        {
+          "data": "2025-01-01",
+          "descrição": "Descrição original da data",
+          "tipo": "tipo original",
+          "relevância": "Breve explicação da relevância para o(s) nicho(s)"
+        }
+      ]
     `;
 
     console.log('Sending request to GPT-4o-mini for analysis');
