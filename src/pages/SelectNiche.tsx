@@ -14,7 +14,7 @@ const SelectNiche = () => {
         transition={{ delay: 0.2 }}
         className="glass-card p-8 rounded-xl w-full max-w-md"
       >
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="text-2xl font-bold text-neutral-dark mb-2">
           Selecione seus Nichos
         </h2>
         <p className="text-neutral mb-6">

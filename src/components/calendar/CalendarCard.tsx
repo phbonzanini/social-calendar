@@ -23,9 +23,9 @@ const getDateTypeLabel = (type: CalendarDate["category"]) => {
     case "holiday":
       return "Feriado Nacional";
     case "optional":
-      return "Data Opcional";
+      return "Ponto Facultativo";
     default:
-      return "Tipo da Data";
+      return "Data Comemorativa";
   }
 };
 
