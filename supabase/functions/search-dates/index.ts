@@ -25,14 +25,12 @@ serve(async (req) => {
 
     console.log('Attempting to fetch dates for niches:', niches);
 
-    // Construindo a query básica
+    // Construindo a query exatamente como o exemplo SQL fornecido
     let { data, error } = await supabase
       .from('datas_2025')
       .select('*')
       .or(niches.map(niche => 
-        `"nicho 1".eq.'${niche}',` +
-        `"nicho 2".eq.'${niche}',` +
-        `"nicho 3".eq.'${niche}'`
+        `"nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche}`
       ).join(','))
       .order('data');
 
@@ -41,7 +39,7 @@ serve(async (req) => {
       throw error;
     }
 
-    console.log('Initial query results:', data?.length || 0, 'records found');
+    console.log('Query results:', data?.length || 0, 'records found');
 
     // Se não encontrou datas específicas, busca feriados
     if (!data || data.length === 0) {
