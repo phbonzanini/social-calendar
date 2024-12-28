@@ -36,6 +36,11 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       throw dbError;
     }
 
+    if (!allDates || allDates.length === 0) {
+      console.error("Nenhuma data encontrada no banco");
+      throw new Error("Nenhuma data encontrada no banco de dados");
+    }
+
     // Depois usamos a Edge Function para ranquear e filtrar as datas mais relevantes
     console.log("Enviando datas para análise via GPT");
     const { data: searchData, error: searchError } = await supabase.functions.invoke(
@@ -43,7 +48,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       {
         body: { 
           niches,
-          allDates // Enviando todas as datas para análise
+          allDates
         },
       }
     );
@@ -58,6 +63,11 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
         )
       );
 
+      if (filteredDates.length === 0) {
+        console.log("Nenhuma data encontrada para os nichos selecionados");
+        throw new Error("Nenhuma data encontrada para os nichos selecionados");
+      }
+
       return filteredDates.map((item) => ({
         date: item.data,
         title: item.descrição,
@@ -68,10 +78,10 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
     if (!searchData?.dates || searchData.dates.length === 0) {
       console.log("Nenhuma data relevante encontrada");
-      return [];
+      throw new Error("Nenhuma data relevante encontrada para os nichos selecionados");
     }
 
-    console.log("Datas relevantes encontradas:", searchData.dates);
+    console.log("Datas relevantes encontradas:", searchData.dates.length);
     return searchData.dates.map((item: any) => ({
       date: item.data,
       title: item.descrição,
@@ -111,7 +121,7 @@ const Calendar = () => {
         console.error("Erro na query:", error);
         toast({
           title: "Erro ao carregar datas",
-          description: "Não foi possível carregar as datas do calendário. Por favor, tente novamente.",
+          description: error.message || "Não foi possível carregar as datas do calendário. Por favor, tente novamente.",
           variant: "destructive",
         });
       },
@@ -135,21 +145,6 @@ const Calendar = () => {
       description: "O arquivo foi baixado para o seu computador.",
     });
   };
-
-  if (error) {
-    return (
-      <div className="relative min-h-screen">
-        <div className="fixed top-4 left-4 z-10">
-          <Logo />
-        </div>
-        <div className="min-h-screen flex items-center justify-center">
-          <p className="text-red-500">
-            Erro ao carregar o calendário. Por favor, tente novamente.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <motion.div
