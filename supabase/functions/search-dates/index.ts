@@ -65,7 +65,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o-mini',
         messages: [
           { 
             role: 'system', 
@@ -78,12 +78,18 @@ serve(async (req) => {
     });
 
     if (!gptResponse.ok) {
-      console.error('GPT API error:', await gptResponse.text());
-      throw new Error('Failed to get response from GPT');
+      const errorText = await gptResponse.text();
+      console.error('GPT API error:', errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
     }
 
     const gptData = await gptResponse.json();
     console.log('GPT response:', gptData);
+
+    if (!gptData.choices?.[0]?.message?.content) {
+      console.error('Invalid GPT response format:', gptData);
+      throw new Error('Invalid response format from GPT');
+    }
 
     const relevantIds = gptData.choices[0].message.content
       .split(',')
