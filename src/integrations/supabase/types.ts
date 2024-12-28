@@ -15,6 +15,7 @@ export type Database = {
           data: string | null
           descrição: string | null
           id: number
+          niches: string[] | null
           tipo: string | null
         }
         Insert: {
@@ -22,6 +23,7 @@ export type Database = {
           data?: string | null
           descrição?: string | null
           id?: number
+          niches?: string[] | null
           tipo?: string | null
         }
         Update: {
@@ -29,6 +31,7 @@ export type Database = {
           data?: string | null
           descrição?: string | null
           id?: number
+          niches?: string[] | null
           tipo?: string | null
         }
         Relationships: []

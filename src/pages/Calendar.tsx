@@ -23,6 +23,31 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
+    // First try with direct database query using the new niches column
+    const { data: dbData, error: dbError } = await supabase
+      .from("datas_2025")
+      .select("*")
+      .overlaps('niches', niches)
+      .order("data");
+
+    if (dbError) {
+      console.error("Erro na busca no banco:", dbError);
+      throw dbError;
+    }
+
+    if (dbData && dbData.length > 0) {
+      console.log("Datas encontradas no banco:", dbData.length);
+      return dbData.map((item) => ({
+        date: item.data,
+        title: item.descrição,
+        category: item.tipo as "commemorative" | "holiday" | "optional",
+        description: item.descrição,
+      }));
+    }
+
+    // If no results from direct query, try with GPT
+    console.log("Nenhuma data encontrada no banco, tentando com GPT");
+    
     const { data: gptResponse, error: gptError } = await supabase.functions.invoke(
       "search-dates",
       {
@@ -35,43 +60,20 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       throw gptError;
     }
 
-    console.log("Resposta da busca com GPT:", gptResponse);
-
-    if (gptResponse?.dates && gptResponse.dates.length > 0) {
-      return gptResponse.dates.map((item) => ({
-        date: item.data,
-        title: item.descrição,
-        category: item.tipo as "commemorative" | "holiday" | "optional",
-        description: item.descrição,
-      }));
-    }
-
-    console.log("Nenhuma data encontrada via GPT, usando busca padrão");
-
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from("datas_2025")
-      .select("*")
-      .overlaps("niches", niches)
-      .order("data");
-
-    if (fallbackError) {
-      console.error("Erro na busca padrão:", fallbackError);
-      throw fallbackError;
-    }
-
-    if (!fallbackData || fallbackData.length === 0) {
-      console.log("Nenhuma data encontrada na busca padrão");
+    if (!gptResponse?.dates || gptResponse.dates.length === 0) {
+      console.log("Nenhuma data encontrada via GPT");
       return [];
     }
 
-    console.log("Datas encontradas na busca padrão:", fallbackData.length);
-
-    return fallbackData.map((item) => ({
+    console.log("Datas encontradas via GPT:", gptResponse.dates.length);
+    
+    return gptResponse.dates.map((item) => ({
       date: item.data,
       title: item.descrição,
       category: item.tipo as "commemorative" | "holiday" | "optional",
       description: item.descrição,
     }));
+
   } catch (error) {
     console.error("Erro ao buscar datas:", error);
     throw error;
