@@ -14,93 +14,80 @@ serve(async (req) => {
 
   try {
     const { niches } = await req.json();
+    console.log('Nichos recebidos:', niches);
 
-    // Validação inicial dos nichos
+    // Validação básica dos nichos
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
-      console.error('Erro: Nichos inválidos:', niches);
       throw new Error('Nichos inválidos ou não fornecidos');
     }
 
-    // Log dos nichos recebidos
-    console.log('DEBUG - Nichos recebidos:', niches);
-
-    // Inicializar cliente Supabase
+    // Inicialização do cliente Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Buscar todas as datas
-    console.log('DEBUG - Iniciando busca no banco...');
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
 
-    // Verificar erro na busca
+    console.log('Resultado da consulta:', { error: dbError, count: allDates?.length });
+
     if (dbError) {
-      console.error('Erro ao buscar datas:', dbError);
       throw dbError;
     }
 
-    // Verificar se há datas
     if (!allDates || allDates.length === 0) {
-      console.log('DEBUG - Nenhuma data encontrada no banco');
+      console.log('Nenhuma data encontrada no banco');
       return new Response(
         JSON.stringify({ dates: [] }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
 
-    console.log('DEBUG - Total de datas no banco:', allDates.length);
-    console.log('DEBUG - Exemplo de data:', allDates[0]);
-
-    // Simplificar a lógica de filtro
+    // Filtrar datas relevantes
     const relevantDates = allDates.filter(date => {
-      // Sempre incluir feriados nacionais
-      if (date.tipo === 'holiday') {
-        console.log('DEBUG - Incluindo feriado:', date.descrição);
+      // Incluir feriados nacionais
+      if (date.tipo?.toLowerCase() === 'holiday') {
+        console.log('Incluindo feriado:', date.descrição);
         return true;
       }
 
-      // Verificar se algum dos nichos da data corresponde aos selecionados
-      const dateNiches = [
-        date['nicho 1'],
-        date['nicho 2'],
-        date['nicho 3']
-      ].filter(Boolean); // Remove valores null/undefined
+      // Verificar correspondência de nichos
+      const dateNiches = [date['nicho 1'], date['nicho 2'], date['nicho 3']]
+        .filter(niche => niche !== null && niche !== undefined && niche !== '');
 
-      console.log('DEBUG - Verificando data:', {
+      console.log('Verificando nichos para data:', {
+        data: date.data,
         descricao: date.descrição,
-        nichos: dateNiches,
-        tipo: date.tipo
+        nichos: dateNiches
       });
 
-      // Verificar correspondência de nichos (case insensitive)
-      const hasMatch = dateNiches.some(niche => 
-        niches.some(selectedNiche => 
-          selectedNiche.toLowerCase() === niche?.toLowerCase()
+      // Verificar se algum dos nichos selecionados corresponde aos nichos da data
+      const hasMatch = niches.some(selectedNiche => 
+        dateNiches.some(dateNiche => 
+          dateNiche?.toLowerCase() === selectedNiche.toLowerCase()
         )
       );
 
       if (hasMatch) {
-        console.log('DEBUG - Match encontrado para:', date.descrição);
+        console.log('Match encontrado para:', date.descrição);
       }
 
       return hasMatch;
     });
 
-    console.log('DEBUG - Total de datas relevantes encontradas:', relevantDates.length);
+    console.log('Total de datas encontradas:', relevantDates.length);
 
     // Formatar datas para resposta
-    const formattedDates = relevantDates
-      .map(date => ({
-        date: date.data,
-        title: date.descrição,
-        category: date.tipo,
-        description: date.descrição
-      }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    const formattedDates = relevantDates.map(date => ({
+      date: date.data,
+      title: date.descrição,
+      category: date.tipo,
+      description: date.descrição
+    }));
 
-    console.log('DEBUG - Datas formatadas:', formattedDates);
+    console.log('Datas formatadas:', formattedDates);
 
     return new Response(
       JSON.stringify({ dates: formattedDates }), 
@@ -108,7 +95,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Erro na função search-dates:', error);
+    console.error('Erro na função:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,
