@@ -25,14 +25,17 @@ serve(async (req) => {
 
     console.log('Attempting to fetch dates for niches:', niches);
 
-    // Construindo a query exatamente como o exemplo SQL fornecido
-    let { data, error } = await supabase
+    // Query simplificada que busca em todas as colunas de nicho
+    const query = supabase
       .from('datas_2025')
       .select('*')
       .or(niches.map(niche => 
-        `"nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche}`
-      ).join(','))
-      .order('data');
+        `"nicho 1".eq.'${niche}',` +
+        `"nicho 2".eq.'${niche}',` +
+        `"nicho 3".eq.'${niche}'`
+      ).join(','));
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Database error:', error);
@@ -40,24 +43,7 @@ serve(async (req) => {
     }
 
     console.log('Query results:', data?.length || 0, 'records found');
-
-    // Se não encontrou datas específicas, busca feriados
-    if (!data || data.length === 0) {
-      console.log('No specific dates found, fetching holidays...');
-      const { data: holidays, error: holidayError } = await supabase
-        .from('datas_2025')
-        .select('*')
-        .eq('tipo', 'holiday')
-        .order('data');
-
-      if (holidayError) {
-        console.error('Error fetching holidays:', holidayError);
-        throw holidayError;
-      }
-
-      data = holidays;
-      console.log('Found holidays:', holidays?.length || 0);
-    }
+    console.log('Sample of data:', data?.slice(0, 2));
 
     // Formata as datas encontradas
     const formattedDates = (data || []).map(date => ({
@@ -67,11 +53,14 @@ serve(async (req) => {
       description: date.descrição
     }));
 
-    console.log('Returning formatted dates:', formattedDates.length);
-
     return new Response(
       JSON.stringify({ dates: formattedDates }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        } 
+      }
     );
 
   } catch (error) {
