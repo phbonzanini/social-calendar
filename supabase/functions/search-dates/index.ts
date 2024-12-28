@@ -21,12 +21,12 @@ serve(async (req) => {
       throw new Error('Nichos inválidos ou não fornecidos');
     }
 
-    // Primeiro, buscar todas as datas do Supabase
+    // Configurar cliente Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Buscar todas as datas da tabela datas_2025
+    // Buscar todas as datas da tabela
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
@@ -44,13 +44,10 @@ serve(async (req) => {
       );
     }
 
-    // Usar o ChatGPT para filtrar as datas mais relevantes para os nichos selecionados
-    const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY')!,
-    });
+    console.log('Total de datas encontradas no Supabase:', allDates.length);
 
-    // Converter as datas do Supabase para o formato que vamos usar
-    const availableDates = allDates.map(date => ({
+    // Preparar as datas para o ChatGPT
+    const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
       description: date.descrição,
@@ -60,10 +57,16 @@ serve(async (req) => {
       nicho3: date["nicho 3"]
     }));
 
-    const prompt = `Aqui está uma lista de datas comemorativas da nossa base de dados:
-    ${JSON.stringify(availableDates, null, 2)}
+    // Configurar OpenAI
+    const openai = new OpenAI({
+      apiKey: Deno.env.get('OPENAI_API_KEY')!,
+    });
 
-    Por favor, analise estas datas e selecione APENAS as que são relevantes para os seguintes nichos: ${niches.join(', ')}.
+    const prompt = `
+    Aqui está uma lista de datas comemorativas da nossa base de dados:
+    ${JSON.stringify(formattedDates, null, 2)}
+
+    Por favor, analise estas datas e retorne APENAS as que são relevantes para os seguintes nichos: ${niches.join(', ')}.
     Uma data é relevante se um dos nichos solicitados aparecer em qualquer uma das colunas nicho1, nicho2 ou nicho3.
 
     Retorne apenas as datas relevantes em formato JSON, mantendo apenas os campos:
@@ -72,7 +75,8 @@ serve(async (req) => {
     - description (string)
     - category (commemorative, holiday, ou optional)
 
-    Não crie novas datas, use APENAS as datas fornecidas acima.`;
+    Não crie novas datas, use APENAS as datas fornecidas acima.
+    Retorne um objeto JSON com uma propriedade 'dates' contendo um array das datas relevantes.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -91,13 +95,14 @@ serve(async (req) => {
     });
 
     const response = completion.choices[0].message.content;
-    console.log('Datas encontradas:', response);
+    console.log('Resposta do ChatGPT:', response);
 
     if (!response) {
       throw new Error('Resposta vazia do ChatGPT');
     }
 
     const filteredDates = JSON.parse(response).dates || [];
+    console.log('Datas filtradas:', filteredDates);
 
     return new Response(
       JSON.stringify({ dates: filteredDates }),
