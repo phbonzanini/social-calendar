@@ -88,7 +88,7 @@ const Calendar = () => {
     exportToPDF(dates, selectedNiches);
     toast({
       title: "PDF gerado com sucesso",
-      description: "O arquivo foi baixado para o seu computador.",
+      description: "O arquivo foi baixado para o seu dispositivo.",
     });
   };
 
@@ -97,7 +97,7 @@ const Calendar = () => {
     exportToCSV(dates);
     toast({
       title: "CSV gerado com sucesso",
-      description: "O arquivo foi baixado para o seu computador.",
+      description: "O arquivo foi baixado para o seu dispositivo.",
     });
   };
 
