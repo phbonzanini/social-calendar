@@ -1,7 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,27 +13,35 @@ serve(async (req) => {
   }
 
   try {
-    const { niches, allDates } = await req.json();
+    const { niches } = await req.json();
 
-    console.log('Iniciando análise para os nichos:', niches);
-    console.log('Total de datas disponíveis:', allDates.length);
+    console.log('Received request for niches:', niches);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Nichos inválidos ou não fornecidos');
     }
 
-    // Filter dates directly based on niches array overlap
-    const relevantDates = allDates.filter(date => {
-      // Check if any of the selected niches are in the date's niches array
-      return date.niches && date.niches.some((niche: string) => 
-        niches.includes(niche)
-      );
-    });
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Datas relevantes encontradas:', relevantDates.length);
+    console.log('Querying database for dates...');
 
-    if (relevantDates.length === 0) {
-      console.log('Nenhuma data relevante encontrada para os nichos selecionados');
+    // Query the database for dates that match any of the selected niches
+    const { data: dates, error: dbError } = await supabase
+      .from('datas_2025')
+      .select('*')
+      .overlaps('niches', niches);
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+      throw dbError;
+    }
+
+    console.log(`Found ${dates?.length || 0} dates in database`);
+
+    if (!dates || dates.length === 0) {
       return new Response(
         JSON.stringify({ 
           dates: [],
@@ -44,77 +51,23 @@ serve(async (req) => {
       );
     }
 
-    // Use GPT to enhance and validate the selected dates
-    const prompt = `
-      Analise estas datas comemorativas e confirme sua relevância para os nichos: ${niches.join(', ')}.
-      
-      Datas para análise:
-      ${JSON.stringify(relevantDates, null, 2)}
-      
-      Retorne apenas as datas que têm real potencial de marketing para os nichos selecionados.
-      Mantenha o formato original das datas.
-      RETORNE APENAS O ARRAY JSON, sem texto adicional.
-    `;
+    // Format dates for response
+    const formattedDates = dates.map(date => ({
+      date: date.data,
+      title: date.descrição,
+      category: date.tipo,
+      description: date.descrição,
+    }));
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'Você é um especialista em marketing que analisa datas comemorativas.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('Erro na resposta do GPT:', await response.text());
-      // If GPT fails, return the filtered dates directly
-      return new Response(
-        JSON.stringify({ dates: relevantDates }), 
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
-      );
-    }
-
-    const gptData = await response.json();
-    let enhancedDates = relevantDates; // Default to filtered dates
-
-    if (gptData.choices?.[0]?.message?.content) {
-      try {
-        const content = gptData.choices[0].message.content;
-        const match = content.match(/\[[\s\S]*\]/);
-        if (match) {
-          const parsedDates = JSON.parse(match[0]);
-          if (Array.isArray(parsedDates) && parsedDates.length > 0) {
-            enhancedDates = parsedDates;
-          }
-        }
-      } catch (error) {
-        console.error('Erro ao processar resposta do GPT:', error);
-        // Keep using the filtered dates if GPT processing fails
-      }
-    }
-
-    console.log('Retornando datas processadas:', enhancedDates.length);
+    console.log('Returning formatted dates:', formattedDates);
 
     return new Response(
-      JSON.stringify({ dates: enhancedDates }), 
+      JSON.stringify({ dates: formattedDates }), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
     );
 
   } catch (error) {
-    console.error('Erro na função search-dates:', error);
+    console.error('Error in search-dates function:', error);
     return new Response(
       JSON.stringify({ 
         error: error.message,

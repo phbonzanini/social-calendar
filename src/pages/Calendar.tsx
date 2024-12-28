@@ -24,54 +24,25 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
-    // Fetch all dates from the database
-    const { data: allDates, error: dbError } = await supabase
-      .from("datas_2025")
-      .select("*");
-
-    if (dbError) {
-      console.error("Erro na busca no banco:", dbError);
-      throw dbError;
-    }
-
-    console.log("Total de datas encontradas no banco:", allDates?.length || 0);
-
-    if (!allDates || allDates.length === 0) {
-      console.log("Nenhuma data encontrada no banco");
-      return [];
-    }
-
-    // Send dates for analysis
-    console.log("Enviando datas para análise");
-    const { data: searchData, error: searchError } = await supabase.functions.invoke(
+    const { data, error } = await supabase.functions.invoke(
       "search-dates",
       {
-        body: { 
-          niches,
-          allDates
-        },
+        body: { niches },
       }
     );
 
-    if (searchError) {
-      console.error("Erro na função de busca:", searchError);
-      throw searchError;
+    if (error) {
+      console.error("Erro na função de busca:", error);
+      throw error;
     }
 
-    if (!searchData?.dates || searchData.dates.length === 0) {
-      console.log("Nenhuma data relevante encontrada após análise");
+    if (!data?.dates) {
+      console.log("Nenhuma data encontrada");
       return [];
     }
 
-    console.log("Datas relevantes encontradas:", searchData.dates.length);
-
-    // Map the dates to the expected format
-    return searchData.dates.map((item: any) => ({
-      date: item.data,
-      title: item.descrição,
-      category: item.tipo as "commemorative" | "holiday" | "optional",
-      description: item.descrição,
-    }));
+    console.log("Datas encontradas:", data.dates);
+    return data.dates;
 
   } catch (error) {
     console.error("Erro ao buscar datas:", error);
@@ -85,7 +56,7 @@ const LoadingState = () => (
     <div className="text-center max-w-md px-4">
       <h3 className="text-lg font-semibold mb-2">Analisando datas relevantes</h3>
       <p className="text-muted-foreground">
-        Estamos buscando e analisando as datas mais relevantes para os nichos selecionados. 
+        Estamos buscando as datas mais relevantes para os nichos selecionados. 
         Isso pode levar alguns segundos...
       </p>
     </div>
@@ -101,7 +72,7 @@ const Calendar = () => {
     queryKey: ["calendar-dates", selectedNiches],
     queryFn: () => fetchDatesForNiches(selectedNiches),
     meta: {
-      onError: (error: Error) => {
+      error: (error: Error) => {
         console.error("Erro na query:", error);
         toast({
           title: "Erro ao carregar datas",
@@ -146,7 +117,13 @@ const Calendar = () => {
           onExportPDF={handleExportPDF}
           onExportCSV={handleExportCSV}
         />
-        {!isLoading && (!dates || dates.length === 0) ? (
+        {error ? (
+          <div className="min-h-[200px] flex items-center justify-center">
+            <p className="text-red-600">
+              Erro ao carregar datas: {error.message}
+            </p>
+          </div>
+        ) : !isLoading && (!dates || dates.length === 0) ? (
           <div className="min-h-[200px] flex items-center justify-center">
             <p className="text-neutral-dark">
               Nenhuma data encontrada para os nichos selecionados.
