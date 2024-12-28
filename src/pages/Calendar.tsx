@@ -120,7 +120,7 @@ const Calendar = () => {
   if (isLoading) {
     return (
       <div className="relative min-h-screen">
-        <div className="absolute top-6 left-6">
+        <div className="fixed top-4 left-4 z-50">
           <Logo />
         </div>
         <div className="min-h-screen flex items-center justify-center">
@@ -133,7 +133,7 @@ const Calendar = () => {
   if (error) {
     return (
       <div className="relative min-h-screen">
-        <div className="absolute top-6 left-6">
+        <div className="fixed top-4 left-4 z-50">
           <Logo />
         </div>
         <div className="min-h-screen flex items-center justify-center">
@@ -148,7 +148,7 @@ const Calendar = () => {
   if (!dates || dates.length === 0) {
     return (
       <div className="relative min-h-screen">
-        <div className="absolute top-6 left-6">
+        <div className="fixed top-4 left-4 z-50">
           <Logo />
         </div>
         <div className="min-h-screen flex items-center justify-center">
@@ -166,10 +166,10 @@ const Calendar = () => {
       animate={{ opacity: 1 }}
       className="relative min-h-screen p-6 bg-gradient-to-br from-primary-light via-white to-neutral-light"
     >
-      <div className="absolute top-6 left-6">
+      <div className="fixed top-4 left-4 z-50">
         <Logo />
       </div>
-      <div className="max-w-4xl mx-auto pt-24">
+      <div className="max-w-4xl mx-auto pt-6">
         <CalendarHeader
           selectedNiches={selectedNiches}
           onExportPDF={handleExportPDF}
