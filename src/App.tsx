@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import SelectNiche from "./pages/SelectNiche";
 import Calendar from "./pages/Calendar";
+import { FeedbackButton } from "./components/FeedbackButton";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/select-niche" element={<SelectNiche />} />
           <Route path="/calendar" element={<Calendar />} />
         </Routes>
+        <FeedbackButton />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

@@ -28,20 +28,30 @@ serve(async (req) => {
 
     console.log('Querying database for dates...');
 
-    // Query the database for dates that match any of the selected niches
-    const { data: dates, error: dbError } = await supabase
+    // Primeiro, buscar todas as datas comemorativas e feriados
+    const { data: holidayDates, error: holidayError } = await supabase
+      .from('datas_2025')
+      .select('*')
+      .or('tipo.eq.holiday,tipo.eq.commemorative');
+
+    // Depois, buscar datas específicas dos nichos selecionados
+    const { data: nicheDates, error: nicheError } = await supabase
       .from('datas_2025')
       .select('*')
       .overlaps('niches', niches);
 
-    if (dbError) {
-      console.error('Database error:', dbError);
-      throw dbError;
+    if (holidayError || nicheError) {
+      console.error('Database error:', holidayError || nicheError);
+      throw holidayError || nicheError;
     }
 
-    console.log(`Found ${dates?.length || 0} dates in database`);
+    // Combinar e remover duplicatas
+    const allDates = [...(holidayDates || []), ...(nicheDates || [])];
+    const uniqueDates = Array.from(new Map(allDates.map(date => [date.data, date])).values());
 
-    if (!dates || dates.length === 0) {
+    console.log(`Found ${uniqueDates.length} unique dates in database`);
+
+    if (uniqueDates.length === 0) {
       return new Response(
         JSON.stringify({ 
           dates: [],
@@ -52,7 +62,7 @@ serve(async (req) => {
     }
 
     // Format dates for response
-    const formattedDates = dates.map(date => ({
+    const formattedDates = uniqueDates.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo,
