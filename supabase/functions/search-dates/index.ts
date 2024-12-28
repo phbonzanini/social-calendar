@@ -1,8 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -15,26 +13,33 @@ serve(async (req) => {
 
   try {
     const { niches, allDates } = await req.json();
-    
-    console.log('Iniciando análise para os nichos:', niches);
-    console.log('Total de datas para análise:', allDates.length);
+
+    console.log('Analisando datas para os nichos:', niches);
+    console.log('Total de datas disponíveis:', allDates.length);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
-      throw new Error('Nichos inválidos ou vazios');
+      throw new Error('Nichos inválidos ou não fornecidos');
     }
 
     if (!allDates || !Array.isArray(allDates) || allDates.length === 0) {
+      console.log('Nenhuma data encontrada no banco');
       return new Response(
         JSON.stringify({ dates: [] }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
       );
     }
 
+    // Formatar as datas para o prompt do GPT
     const formattedDates = allDates.map(date => ({
       data: date.data,
       descricao: date.descrição,
       tipo: date.tipo
     }));
+
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key não configurada');
+    }
 
     const prompt = `
       Você é um especialista em marketing digital e calendário de conteúdo.
@@ -46,14 +51,14 @@ serve(async (req) => {
       ${JSON.stringify(formattedDates, null, 2)}
 
       Instruções importantes:
-      1. Considere TODAS as conexões possíveis entre as datas e os nichos
-      2. Inclua datas que possam ser usadas para:
+      1. Considere TODAS as conexões possíveis entre as datas e os nichos, mesmo que indiretas
+      2. Para cada nicho, pense em como a data pode ser usada para:
          - Marketing digital e conteúdo
          - Promoções e vendas
          - Engajamento nas redes sociais
-         - Campanhas sazonais
-      3. Mantenha os dados originais das datas
-      4. Retorne TODAS as datas que tenham qualquer relevância
+      3. Mantenha os dados originais das datas (data, descrição e tipo)
+      4. Retorne TODAS as datas que tenham qualquer relevância, mesmo que a conexão seja indireta
+      5. Seja criativo ao pensar em oportunidades de marketing para cada nicho
 
       Retorne apenas um array JSON com as datas selecionadas, mantendo este formato para cada data:
       {
@@ -65,7 +70,7 @@ serve(async (req) => {
       Retorne apenas o array JSON, sem texto adicional.
     `;
 
-    console.log('Enviando prompt para análise');
+    console.log('Enviando prompt para análise do GPT');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -104,11 +109,14 @@ serve(async (req) => {
     let relevantDates;
     try {
       const content = data.choices[0].message.content;
+      console.log('Conteúdo da resposta:', content);
+      
       const match = content.match(/\[[\s\S]*\]/);
       if (match) {
         relevantDates = JSON.parse(match[0]);
         console.log('Datas relevantes encontradas:', relevantDates.length);
         
+        // Validar e filtrar as datas retornadas
         relevantDates = relevantDates.filter(date => 
           date.data && 
           date.descrição && 

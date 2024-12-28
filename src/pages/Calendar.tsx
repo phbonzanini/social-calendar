@@ -24,7 +24,8 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
   console.log("Buscando datas para os nichos:", niches);
 
   try {
-    const { data: relevantDates, error: dbError } = await supabase
+    // Primeiro, buscar todas as datas do banco
+    const { data: allDates, error: dbError } = await supabase
       .from("datas_2025")
       .select("*");
 
@@ -33,24 +34,21 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       throw dbError;
     }
 
-    if (!relevantDates) {
+    if (!allDates) {
       console.error("Nenhuma data encontrada no banco");
       return [];
     }
 
-    console.log("Datas encontradas no banco:", relevantDates.length);
+    console.log("Total de datas encontradas no banco:", allDates.length);
 
-    if (relevantDates.length === 0) {
-      return [];
-    }
-
-    console.log("Enviando datas para análise via GPT");
+    // Enviar todas as datas para análise via Edge Function
+    console.log("Enviando datas para análise");
     const { data: searchData, error: searchError } = await supabase.functions.invoke(
       "search-dates",
       {
         body: { 
           niches,
-          allDates: relevantDates
+          allDates
         },
       }
     );
@@ -61,11 +59,13 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
     }
 
     if (!searchData?.dates || searchData.dates.length === 0) {
-      console.log("Nenhuma data relevante encontrada após análise GPT");
+      console.log("Nenhuma data relevante encontrada após análise");
       return [];
     }
 
-    console.log("Datas relevantes encontradas após análise GPT:", searchData.dates.length);
+    console.log("Datas relevantes encontradas:", searchData.dates.length);
+
+    // Mapear as datas para o formato esperado pelo componente
     return searchData.dates.map((item: any) => ({
       date: item.data,
       title: item.descrição,
