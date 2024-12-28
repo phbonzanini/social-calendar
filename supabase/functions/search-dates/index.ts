@@ -20,10 +20,14 @@ serve(async (req) => {
     const { niches } = await req.json();
     console.log('Received niches:', niches);
     
+    if (!niches || !Array.isArray(niches) || niches.length === 0) {
+      throw new Error('Invalid or empty niches array');
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Buscar todas as datas do banco
-    const { data: allDates, error: dbError } = await supabase
+    // First try to get dates directly from the database
+    const { data: directDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
       .order('data');
@@ -33,21 +37,22 @@ serve(async (req) => {
       throw dbError;
     }
 
-    if (!allDates || allDates.length === 0) {
+    if (!directDates || directDates.length === 0) {
       console.log('No dates found in database');
-      return new Response(JSON.stringify({ dates: [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ dates: [] }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+      );
     }
 
-    console.log('Found dates in database:', allDates.length);
+    console.log('Found dates in database:', directDates.length);
 
-    // Preparar o prompt para o GPT
+    // Prepare the prompt for GPT
     const prompt = `
       Analise estas datas comemorativas e identifique quais são mais relevantes para os seguintes nichos de negócio: ${niches.join(', ')}.
       
       Datas disponíveis:
-      ${allDates.map(d => `${d.id}. ${d.data}: ${d.descrição} (${d.tipo})`).join('\n')}
+      ${directDates.map(d => `${d.id}. ${d.data}: ${d.descrição} (${d.tipo})`).join('\n')}
       
       Retorne apenas os IDs das datas mais relevantes separados por vírgula.
       Exemplo: 1,4,7,12
@@ -55,9 +60,9 @@ serve(async (req) => {
       Responda APENAS com os números, sem texto adicional.
     `;
 
-    console.log('Sending request to GPT');
+    console.log('Sending request to GPT with prompt:', prompt);
 
-    // Consultar o GPT
+    // Call OpenAI API
     const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -80,7 +85,13 @@ serve(async (req) => {
     if (!gptResponse.ok) {
       const errorText = await gptResponse.text();
       console.error('GPT API error:', errorText);
-      throw new Error(`OpenAI API error: ${errorText}`);
+      
+      // Fallback to returning all dates if GPT fails
+      console.log('Falling back to returning all dates');
+      return new Response(
+        JSON.stringify({ dates: directDates }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+      );
     }
 
     const gptData = await gptResponse.json();
@@ -88,7 +99,11 @@ serve(async (req) => {
 
     if (!gptData.choices?.[0]?.message?.content) {
       console.error('Invalid GPT response format:', gptData);
-      throw new Error('Invalid response format from GPT');
+      // Fallback to returning all dates if response format is invalid
+      return new Response(
+        JSON.stringify({ dates: directDates }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+      );
     }
 
     const relevantIds = gptData.choices[0].message.content
@@ -99,34 +114,31 @@ serve(async (req) => {
     console.log('Relevant IDs:', relevantIds);
 
     if (relevantIds.length === 0) {
-      console.log('No relevant dates found by GPT');
-      return new Response(JSON.stringify({ dates: [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.log('No relevant dates found by GPT, returning all dates');
+      return new Response(
+        JSON.stringify({ dates: directDates }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+      );
     }
 
-    // Buscar as datas relevantes
-    const { data: relevantDates, error: finalError } = await supabase
-      .from('datas_2025')
-      .select('*')
-      .in('id', relevantIds)
-      .order('data');
+    // Get the filtered dates
+    const relevantDates = directDates.filter(date => relevantIds.includes(date.id));
 
-    if (finalError) {
-      console.error('Error fetching relevant dates:', finalError);
-      throw finalError;
-    }
+    console.log('Returning relevant dates:', relevantDates.length);
 
-    console.log('Returning relevant dates:', relevantDates?.length);
+    return new Response(
+      JSON.stringify({ dates: relevantDates }), 
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }}
+    );
 
-    return new Response(JSON.stringify({ dates: relevantDates }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
   } catch (error) {
     console.error('Error in search-dates function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: error.message }), 
+      { 
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
 });
