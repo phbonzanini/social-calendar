@@ -13,7 +13,6 @@ const corsHeaders = {
 serve(async (req) => {
   console.log('Function called with method:', req.method);
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -36,9 +35,11 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Fetching dates from database...');
     
+    // Pre-filter dates at database level using OR conditions for each niche
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('*');
+      .select('*')
+      .or(niches.map(niche => `nicho1.eq.${niche},nicho2.eq.${niche},nicho3.eq.${niche}`).join(','));
 
     if (dbError) {
       console.error('Database error:', dbError);
@@ -53,16 +54,14 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Found ${allDates.length} dates in database`);
+    console.log(`Found ${allDates.length} potential dates in database`);
 
+    // Simplify the data structure to reduce tokens
     const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
-      description: date.descrição,
       category: date.tipo || 'commemorative',
-      nicho1: date["nicho 1"],
-      nicho2: date["nicho 2"],
-      nicho3: date["nicho 3"]
+      niches: [date["nicho 1"], date["nicho 2"], date["nicho 3"]].filter(Boolean)
     }));
 
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
@@ -77,51 +76,29 @@ serve(async (req) => {
     console.log('Calling OpenAI API...');
 
     const prompt = `
-    Você é um assistente especializado em filtrar datas comemorativas para negócios, com foco em retornar APENAS datas com relevância comercial DIRETA para os nichos especificados.
+    Você é um especialista em filtrar datas comemorativas para negócios.
+    Analise estas datas e retorne APENAS as que têm conexão DIRETA e COMERCIAL com os nichos: ${niches.join(', ')}.
 
-    REGRAS CRÍTICAS:
-    1. APENAS retorne datas que já estão EXPLICITAMENTE marcadas com os nichos solicitados nas colunas nicho1, nicho2 ou nicho3
-    2. Se uma data não estiver marcada com o nicho nas colunas, NÃO a inclua, mesmo que pareça relacionada
-    3. NÃO crie novas datas ou modifique as existentes
-    4. NUNCA faça conexões indiretas ou subjetivas
-    5. Cada data retornada DEVE ter uma clara oportunidade comercial para o nicho
+    REGRAS:
+    1. Retorne SOMENTE datas com relevância comercial DIRETA
+    2. Exclua datas com conexões indiretas ou subjetivas
+    3. A data deve representar uma clara oportunidade de negócio
 
-    EXEMPLOS DE FILTRAGEM RIGOROSA:
+    Aqui estão as datas pré-filtradas do banco:
+    ${JSON.stringify(formattedDates)}
 
-    Para o nicho "MODA":
-    ✅ INCLUIR:
-    - Dia do Estilista (conexão direta com profissionais da moda)
-    - Dia da Costureira (profissional essencial do setor)
-    ❌ NÃO INCLUIR:
-    - Dia da Beleza (muito amplo/indireto)
-    - Dia do Consumidor (muito genérico)
-    - Dia das Mães (mesmo que seja data de vendas)
-
-    Para o nicho "EDUCAÇÃO":
-    ✅ INCLUIR:
-    - Dia do Professor (profissional central)
-    - Dia Mundial da Alfabetização (tema central)
-    ❌ NÃO INCLUIR:
-    - Dia do Livro (muito genérico)
-    - Dia da Cultura (muito amplo)
-
-    Aqui está a lista de datas da nossa base de dados:
-    ${JSON.stringify(formattedDates, null, 2)}
-
-    Por favor, analise estas datas e retorne APENAS as que têm conexão DIRETA e COMERCIALMENTE RELEVANTE para os seguintes nichos: ${niches.join(', ')}.
-
-    Retorne apenas as datas relevantes em formato JSON, mantendo apenas os campos:
+    Retorne apenas as datas relevantes em JSON com os campos:
     - date (YYYY-MM-DD)
     - title (string)
     - description (string)
     - category (commemorative, holiday, ou optional)`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "Você é um assistente especializado em filtrar datas comemorativas para negócios. Você deve ser EXTREMAMENTE rigoroso e retornar apenas datas com conexão DIRETA e COMERCIAL com os nichos solicitados. Nunca faça conexões indiretas ou subjetivas."
+          content: "Você é um assistente especializado em filtrar datas comemorativas para negócios. Seja EXTREMAMENTE rigoroso e retorne apenas datas com conexão DIRETA e COMERCIAL com os nichos solicitados."
         },
         {
           role: "user",
