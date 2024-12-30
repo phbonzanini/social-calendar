@@ -15,6 +15,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { toast } from "sonner";
 
 export const niches = [
   { value: "education", label: "Educação" },
@@ -57,11 +58,22 @@ export const NicheSelector = () => {
     );
   };
 
-  const handleGenerateCalendar = () => {
+  const handleGenerateCalendar = async () => {
     if (selectedNiches.length === 0) {
+      toast.error("Selecione pelo menos um nicho");
       return;
     }
-    navigate("/calendar", { state: { selectedNiches } });
+
+    try {
+      navigate("/calendar", { 
+        state: { 
+          selectedNiches: selectedNiches.map(niche => niche.trim()) 
+        } 
+      });
+    } catch (error) {
+      console.error("Navigation error:", error);
+      toast.error("Erro ao gerar calendário. Tente novamente.");
+    }
   };
 
   return (
