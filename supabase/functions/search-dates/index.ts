@@ -31,21 +31,11 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Buscando datas no banco de dados...');
 
-    // Construir condições OR para cada nicho e coluna
-    const orConditions = niches.flatMap(niche => [
-      { "nicho 1": niche },
-      { "nicho 2": niche },
-      { "nicho 3": niche }
-    ]);
-
+    // Construir a query usando filter
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(orConditions.map(condition => {
-        const column = Object.keys(condition)[0];
-        const value = condition[column];
-        return `${column}.eq.${value}`;
-      }).join(','));
+      .or(`nicho 1.eq.${niches[0]},nicho 2.eq.${niches[0]},nicho 3.eq.${niches[0]}`);
 
     console.log('Query executada, número de datas encontradas:', allDates?.length || 0);
 
