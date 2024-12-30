@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import OpenAI from 'https://esm.sh/openai@4.28.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,6 +9,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -57,40 +58,47 @@ serve(async (req) => {
       nicho3: date["nicho 3"]
     }));
 
-    // Configurar OpenAI
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY')!,
     });
 
     const prompt = `
-    Aqui está uma lista de datas comemorativas da nossa base de dados:
+    Você é um assistente especializado em filtrar datas comemorativas para negócios. Sua tarefa é analisar uma lista de datas e retornar APENAS aquelas que têm uma conexão DIRETA e COMERCIALMENTE RELEVANTE com os nichos especificados.
+
+    REGRAS IMPORTANTES:
+    1. Retorne APENAS datas que já estão marcadas com os nichos solicitados nas colunas nicho1, nicho2 ou nicho3
+    2. Se uma data não estiver explicitamente marcada com o nicho nas colunas, NÃO a inclua
+    3. NÃO crie novas datas ou modifique as existentes
+    4. NÃO faça conexões subjetivas ou indiretas
+
+    EXEMPLO PARA O NICHO "MODA":
+    ✅ INCLUIR: "Dia do Estilista", "Dia da Costureira"
+    ❌ NÃO INCLUIR: "Dia da Beleza", "Dia do Consumidor"
+
+    Aqui está a lista de datas da nossa base de dados:
     ${JSON.stringify(formattedDates, null, 2)}
 
-    Por favor, analise estas datas e retorne APENAS as que são relevantes para os seguintes nichos: ${niches.join(', ')}.
-    Uma data é relevante se um dos nichos solicitados aparecer em qualquer uma das colunas nicho1, nicho2 ou nicho3.
+    Por favor, analise estas datas e retorne APENAS as que são diretamente relevantes para os seguintes nichos: ${niches.join(', ')}.
 
     Retorne apenas as datas relevantes em formato JSON, mantendo apenas os campos:
     - date (YYYY-MM-DD)
     - title (string)
     - description (string)
-    - category (commemorative, holiday, ou optional)
-
-    Não crie novas datas, use APENAS as datas fornecidas acima.
-    Retorne um objeto JSON com uma propriedade 'dates' contendo um array das datas relevantes.`;
+    - category (commemorative, holiday, ou optional)`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "Você é um assistente especializado em filtrar datas comemorativas. Sua função é analisar datas existentes e selecionar apenas as relevantes para os nichos especificados. Não crie novas datas."
+          content: "Você é um assistente especializado em filtrar datas comemorativas para negócios. Você deve ser extremamente criterioso e retornar apenas datas com conexão direta e comercial com os nichos solicitados."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.3,
+      temperature: 0.2,
       response_format: { type: "json_object" }
     });
 
