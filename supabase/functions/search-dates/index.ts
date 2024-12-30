@@ -31,22 +31,15 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Buscando datas no banco de dados...');
 
-    // Construir a query usando filter
-    let query = supabase
+    // Construir a query usando or()
+    const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('*');
+      .select('*')
+      .or(niches.map(niche => 
+        `"nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche}`
+      ).join(','));
 
-    // Adicionar condições OR para cada nicho
-    const filterConditions = niches.map(niche => {
-      return `"nicho 1".eq.${niche},or:"nicho 2".eq.${niche},or:"nicho 3".eq.${niche}`;
-    }).join(',or:');
-
-    query = query.or(filterConditions);
-
-    // Executar a query
-    const { data: allDates, error: dbError } = await query;
-
-    console.log('Query executada:', query.toSQL());
+    console.log('Query executada para os nichos:', niches);
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
