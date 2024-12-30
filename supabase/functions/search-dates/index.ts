@@ -6,16 +6,16 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Content-Type': 'application/json'
 };
 
 serve(async (req) => {
   console.log('Function called with method:', req.method);
   
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      headers: corsHeaders,
-      status: 204
-    });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -26,10 +26,14 @@ serve(async (req) => {
       throw new Error('Invalid or empty niches array provided');
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing required environment variables');
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Fetching dates from database...');
     
     const { data: allDates, error: dbError } = await supabase
@@ -45,7 +49,7 @@ serve(async (req) => {
       console.log('No dates found in database');
       return new Response(
         JSON.stringify({ dates: [] }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { headers: corsHeaders }
       );
     }
 
@@ -61,12 +65,13 @@ serve(async (req) => {
       nicho3: date["nicho 3"]
     }));
 
-    if (!Deno.env.get('OPENAI_API_KEY')) {
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openaiKey) {
       throw new Error('OpenAI API key not configured');
     }
 
     const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY')!,
+      apiKey: openaiKey,
     });
 
     console.log('Calling OpenAI API...');
@@ -112,7 +117,7 @@ serve(async (req) => {
     - category (commemorative, holiday, ou optional)`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
@@ -123,7 +128,7 @@ serve(async (req) => {
           content: prompt
         }
       ],
-      temperature: 0.1, // Reduzido para aumentar a precisão
+      temperature: 0.1,
       response_format: { type: "json_object" }
     });
 
@@ -139,13 +144,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ dates: filteredDates }), 
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        },
-        status: 200
-      }
+      { headers: corsHeaders }
     );
 
   } catch (error) {
@@ -158,10 +157,7 @@ serve(async (req) => {
       }),
       {
         status: 500,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: corsHeaders
       }
     );
   }
