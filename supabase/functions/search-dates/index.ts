@@ -11,7 +11,6 @@ const corsHeaders = {
 serve(async (req) => {
   console.log('Function called with method:', req.method);
   
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
       headers: corsHeaders,
@@ -27,14 +26,12 @@ serve(async (req) => {
       throw new Error('Invalid or empty niches array provided');
     }
 
-    // Configurar cliente Supabase
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     console.log('Fetching dates from database...');
     
-    // Buscar todas as datas da tabela
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
@@ -54,7 +51,6 @@ serve(async (req) => {
 
     console.log(`Found ${allDates.length} dates in database`);
 
-    // Preparar as datas para o ChatGPT
     const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
@@ -76,22 +72,38 @@ serve(async (req) => {
     console.log('Calling OpenAI API...');
 
     const prompt = `
-    Você é um assistente especializado em filtrar datas comemorativas para negócios. Sua tarefa é analisar uma lista de datas e retornar APENAS aquelas que têm uma conexão DIRETA e COMERCIALMENTE RELEVANTE com os nichos especificados.
+    Você é um assistente especializado em filtrar datas comemorativas para negócios, com foco em retornar APENAS datas com relevância comercial DIRETA para os nichos especificados.
 
-    REGRAS IMPORTANTES:
-    1. Retorne APENAS datas que já estão marcadas com os nichos solicitados nas colunas nicho1, nicho2 ou nicho3
-    2. Se uma data não estiver explicitamente marcada com o nicho nas colunas, NÃO a inclua
+    REGRAS CRÍTICAS:
+    1. APENAS retorne datas que já estão EXPLICITAMENTE marcadas com os nichos solicitados nas colunas nicho1, nicho2 ou nicho3
+    2. Se uma data não estiver marcada com o nicho nas colunas, NÃO a inclua, mesmo que pareça relacionada
     3. NÃO crie novas datas ou modifique as existentes
-    4. NÃO faça conexões subjetivas ou indiretas
+    4. NUNCA faça conexões indiretas ou subjetivas
+    5. Cada data retornada DEVE ter uma clara oportunidade comercial para o nicho
 
-    EXEMPLO PARA O NICHO "MODA":
-    ✅ INCLUIR: "Dia do Estilista", "Dia da Costureira"
-    ❌ NÃO INCLUIR: "Dia da Beleza", "Dia do Consumidor"
+    EXEMPLOS DE FILTRAGEM RIGOROSA:
+
+    Para o nicho "MODA":
+    ✅ INCLUIR:
+    - Dia do Estilista (conexão direta com profissionais da moda)
+    - Dia da Costureira (profissional essencial do setor)
+    ❌ NÃO INCLUIR:
+    - Dia da Beleza (muito amplo/indireto)
+    - Dia do Consumidor (muito genérico)
+    - Dia das Mães (mesmo que seja data de vendas)
+
+    Para o nicho "EDUCAÇÃO":
+    ✅ INCLUIR:
+    - Dia do Professor (profissional central)
+    - Dia Mundial da Alfabetização (tema central)
+    ❌ NÃO INCLUIR:
+    - Dia do Livro (muito genérico)
+    - Dia da Cultura (muito amplo)
 
     Aqui está a lista de datas da nossa base de dados:
     ${JSON.stringify(formattedDates, null, 2)}
 
-    Por favor, analise estas datas e retorne APENAS as que são diretamente relevantes para os seguintes nichos: ${niches.join(', ')}.
+    Por favor, analise estas datas e retorne APENAS as que têm conexão DIRETA e COMERCIALMENTE RELEVANTE para os seguintes nichos: ${niches.join(', ')}.
 
     Retorne apenas as datas relevantes em formato JSON, mantendo apenas os campos:
     - date (YYYY-MM-DD)
@@ -104,14 +116,14 @@ serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: "Você é um assistente especializado em filtrar datas comemorativas para negócios. Você deve ser extremamente criterioso e retornar apenas datas com conexão direta e comercial com os nichos solicitados."
+          content: "Você é um assistente especializado em filtrar datas comemorativas para negócios. Você deve ser EXTREMAMENTE rigoroso e retornar apenas datas com conexão DIRETA e COMERCIAL com os nichos solicitados. Nunca faça conexões indiretas ou subjetivas."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.2,
+      temperature: 0.1, // Reduzido para aumentar a precisão
       response_format: { type: "json_object" }
     });
 
