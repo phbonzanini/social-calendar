@@ -31,16 +31,17 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Buscando datas no banco de dados...');
 
-    // Construindo a query usando or() para cada nicho
+    // Using the correct column names with spaces
     let query = supabase
       .from('datas_2025')
-      .select('data, descrição, tipo');
+      .select('*');
 
-    // Adicionando condições OR para cada nicho
-    const orConditions = niches.map(niche => {
-      return `or(nicho1.eq.${niche},nicho2.eq.${niche},nicho3.eq.${niche})`;
-    }).join(',');
+    // Build OR conditions for each niche
+    const orConditions = niches.map(niche => 
+      `or("nicho 1".eq.'${niche}',"nicho 2".eq.'${niche}',"nicho 3".eq.'${niche}')`
+    ).join(',');
 
+    // Apply the OR conditions
     const { data: allDates, error: dbError } = await query.or(orConditions);
 
     if (dbError) {
@@ -58,7 +59,7 @@ serve(async (req) => {
 
     console.log('Datas encontradas:', allDates);
 
-    // Formatando as datas para o formato esperado
+    // Format dates for OpenAI processing
     const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
@@ -66,7 +67,7 @@ serve(async (req) => {
       description: date.descrição
     }));
 
-    // Usando OpenAI para filtrar as datas mais relevantes
+    // Using OpenAI to filter the most relevant dates
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY')
     });
@@ -96,7 +97,7 @@ serve(async (req) => {
     }`;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4-1106-preview",
       messages: [
         {
           role: "system",
