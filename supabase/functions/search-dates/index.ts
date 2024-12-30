@@ -36,10 +36,11 @@ serve(async (req) => {
     console.log('Fetching dates from database...');
     
     // Pre-filter dates at database level using OR conditions for each niche
+    // Note the corrected column names with spaces
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(niches.map(niche => `nicho1.eq.${niche},nicho2.eq.${niche},nicho3.eq.${niche}`).join(','));
+      .or(niches.map(niche => `"nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche}`).join(','));
 
     if (dbError) {
       console.error('Database error:', dbError);
