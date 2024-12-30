@@ -1,7 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import OpenAI from 'https://esm.sh/openai@4.28.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import OpenAI from 'https://esm.sh/openai@4.28.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,20 +31,22 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Buscando datas no banco de dados...');
 
-    // Create an array of OR conditions for each niche
-    const orConditions = niches.flatMap(niche => [
-      { 'nicho 1': niche },
-      { 'nicho 2': niche },
-      { 'nicho 3': niche }
-    ]);
-
-    // Execute the query with proper OR conditions
-    const { data: allDates, error: dbError } = await supabase
+    // Construir a query usando filter
+    let query = supabase
       .from('datas_2025')
-      .select('*')
-      .or(orConditions.map(condition => 
-        `${Object.keys(condition)[0]}.eq.${Object.values(condition)[0]}`
-      ).join(','));
+      .select('*');
+
+    // Adicionar condições OR para cada nicho
+    const filterConditions = niches.map(niche => {
+      return `"nicho 1".eq.${niche},or:"nicho 2".eq.${niche},or:"nicho 3".eq.${niche}`;
+    }).join(',or:');
+
+    query = query.or(filterConditions);
+
+    // Executar a query
+    const { data: allDates, error: dbError } = await query;
+
+    console.log('Query executada:', query.toSQL());
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
@@ -52,7 +54,7 @@ serve(async (req) => {
     }
 
     if (!allDates || allDates.length === 0) {
-      console.log('Nenhuma data encontrada');
+      console.log('Nenhuma data encontrada no banco de dados');
       return new Response(
         JSON.stringify({ dates: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -61,7 +63,7 @@ serve(async (req) => {
 
     console.log('Datas encontradas:', allDates);
 
-    // Format dates for OpenAI processing
+    // Formatar as datas para processamento
     const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
@@ -69,7 +71,7 @@ serve(async (req) => {
       description: date.descrição
     }));
 
-    // Using OpenAI to filter the most relevant dates
+    // Usar OpenAI para filtrar as datas mais relevantes
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY')
     });
