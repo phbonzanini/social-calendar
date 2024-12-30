@@ -14,7 +14,7 @@ serve(async (req) => {
   console.log('Function called with method:', req.method);
   
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -35,12 +35,24 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Fetching dates from database...');
     
-    // Pre-filter dates at database level using OR conditions for each niche
-    // Note the corrected column names with spaces
+    // Build the OR conditions for each niche
+    const nicheConditions = niches.map(niche => `
+      "nicho 1" = '${niche}' OR 
+      "nicho 2" = '${niche}' OR 
+      "nicho 3" = '${niche}'
+    `).join(' OR ');
+
+    const query = `
+      SELECT data, descrição as title, tipo as category
+      FROM datas_2025
+      WHERE ${nicheConditions}
+      ORDER BY data ASC
+    `;
+
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('*')
-      .or(niches.map(niche => `"nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche}`).join(','));
+      .select('data, descrição, tipo, "nicho 1", "nicho 2", "nicho 3"')
+      .or(nicheConditions);
 
     if (dbError) {
       console.error('Database error:', dbError);
@@ -51,17 +63,18 @@ serve(async (req) => {
       console.log('No dates found in database');
       return new Response(
         JSON.stringify({ dates: [] }),
-        { headers: corsHeaders }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log(`Found ${allDates.length} potential dates in database`);
 
-    // Simplify the data structure to reduce tokens
+    // Format dates for OpenAI processing
     const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo || 'commemorative',
+      description: date.descrição,
       niches: [date["nicho 1"], date["nicho 2"], date["nicho 3"]].filter(Boolean)
     }));
 
@@ -74,32 +87,38 @@ serve(async (req) => {
       apiKey: openaiKey,
     });
 
-    console.log('Calling OpenAI API...');
+    console.log('Calling OpenAI API for filtering...');
 
     const prompt = `
-    Você é um especialista em filtrar datas comemorativas para negócios.
-    Analise estas datas e retorne APENAS as que têm conexão DIRETA e COMERCIAL com os nichos: ${niches.join(', ')}.
+    Analise estas datas comemorativas e retorne APENAS as que têm conexão DIRETA e COMERCIAL com os nichos: ${niches.join(', ')}.
 
-    REGRAS:
-    1. Retorne SOMENTE datas com relevância comercial DIRETA
+    REGRAS IMPORTANTES:
+    1. Retorne SOMENTE datas com relevância comercial DIRETA para os nichos
     2. Exclua datas com conexões indiretas ou subjetivas
     3. A data deve representar uma clara oportunidade de negócio
+    4. Mantenha a descrição original da data
 
-    Aqui estão as datas pré-filtradas do banco:
+    Datas disponíveis:
     ${JSON.stringify(formattedDates)}
 
-    Retorne apenas as datas relevantes em JSON com os campos:
-    - date (YYYY-MM-DD)
-    - title (string)
-    - description (string)
-    - category (commemorative, holiday, ou optional)`;
+    Retorne apenas as datas relevantes em formato JSON com os campos:
+    {
+      "dates": [
+        {
+          "date": "YYYY-MM-DD",
+          "title": "string",
+          "description": "string",
+          "category": "commemorative | holiday | optional"
+        }
+      ]
+    }`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
-          content: "Você é um assistente especializado em filtrar datas comemorativas para negócios. Seja EXTREMAMENTE rigoroso e retorne apenas datas com conexão DIRETA e COMERCIAL com os nichos solicitados."
+          content: "Você é um especialista em filtrar datas comemorativas para negócios. Seja EXTREMAMENTE rigoroso e retorne apenas datas com conexão DIRETA e COMERCIAL com os nichos solicitados."
         },
         {
           role: "user",
@@ -118,11 +137,11 @@ serve(async (req) => {
     }
 
     const filteredDates = JSON.parse(response).dates || [];
-    console.log(`Filtered ${filteredDates.length} relevant dates`);
+    console.log(`Filtered down to ${filteredDates.length} relevant dates`);
 
     return new Response(
       JSON.stringify({ dates: filteredDates }), 
-      { headers: corsHeaders }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -135,7 +154,7 @@ serve(async (req) => {
       }),
       {
         status: 500,
-        headers: corsHeaders
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
