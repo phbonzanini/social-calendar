@@ -9,72 +9,67 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  console.log('Function called with method:', req.method);
-  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { niches } = await req.json();
-    console.log('Received niches:', niches);
+    console.log('Buscando datas para os nichos:', niches);
     
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
-      throw new Error('Invalid or empty niches array provided');
+      throw new Error('Nenhum nicho selecionado');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error('Missing required environment variables');
+      throw new Error('Variáveis de ambiente não configuradas');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('Fetching dates from database...');
+    console.log('Buscando datas no banco de dados...');
 
-    // Using Supabase query builder instead of raw SQL
-    const { data: allDates, error: dbError } = await supabase
+    // Construindo a query usando or() para cada nicho
+    let query = supabase
       .from('datas_2025')
-      .select('data, descrição, tipo, "nicho 1", "nicho 2", "nicho 3"')
-      .or(niches.map(niche => 
-        `or("nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche})`
-      ).join(','));
+      .select('data, descrição, tipo');
+
+    // Adicionando condições OR para cada nicho
+    const orConditions = niches.map(niche => {
+      return `or(nicho1.eq.${niche},nicho2.eq.${niche},nicho3.eq.${niche})`;
+    }).join(',');
+
+    const { data: allDates, error: dbError } = await query.or(orConditions);
 
     if (dbError) {
-      console.error('Database error:', dbError);
+      console.error('Erro no banco de dados:', dbError);
       throw dbError;
     }
 
     if (!allDates || allDates.length === 0) {
-      console.log('No dates found in database');
+      console.log('Nenhuma data encontrada');
       return new Response(
         JSON.stringify({ dates: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${allDates.length} potential dates in database`);
+    console.log('Datas encontradas:', allDates);
 
-    // Format dates for OpenAI processing
+    // Formatando as datas para o formato esperado
     const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo || 'commemorative',
-      description: date.descrição,
-      niches: [date["nicho 1"], date["nicho 2"], date["nicho 3"]].filter(Boolean)
+      description: date.descrição
     }));
 
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
-
+    // Usando OpenAI para filtrar as datas mais relevantes
     const openai = new OpenAI({
-      apiKey: openaiKey,
+      apiKey: Deno.env.get('OPENAI_API_KEY')
     });
-
-    console.log('Calling OpenAI API for filtering...');
 
     const prompt = `
     Analise estas datas comemorativas e retorne APENAS as que têm conexão DIRETA e COMERCIAL com os nichos: ${niches.join(', ')}.
@@ -117,14 +112,14 @@ serve(async (req) => {
     });
 
     const response = completion.choices[0].message.content;
-    console.log('OpenAI response received');
+    console.log('Resposta do OpenAI recebida');
 
     if (!response) {
-      throw new Error('Empty response from OpenAI');
+      throw new Error('Resposta vazia do OpenAI');
     }
 
     const filteredDates = JSON.parse(response).dates || [];
-    console.log(`Filtered down to ${filteredDates.length} relevant dates`);
+    console.log(`Filtrado para ${filteredDates.length} datas relevantes`);
 
     return new Response(
       JSON.stringify({ dates: filteredDates }), 
@@ -132,12 +127,12 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in function:', error);
+    console.error('Erro na função:', error);
     
     return new Response(
       JSON.stringify({
-        error: error.message || 'An error occurred while processing your request',
-        details: error.stack || 'No stack trace available'
+        error: error.message || 'Ocorreu um erro ao processar sua solicitação',
+        details: error.stack || 'Stack trace não disponível'
       }),
       {
         status: 500,
