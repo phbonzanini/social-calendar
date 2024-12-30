@@ -31,18 +31,22 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Buscando datas no banco de dados...');
 
-    // Using the correct column names with spaces
-    let query = supabase
-      .from('datas_2025')
-      .select('*');
+    // Create the base query
+    const query = supabase.from('datas_2025').select('*');
 
-    // Build OR conditions for each niche
-    const orConditions = niches.map(niche => 
-      `or("nicho 1".eq.'${niche}',"nicho 2".eq.'${niche}',"nicho 3".eq.'${niche}')`
-    ).join(',');
+    // Build the filter conditions
+    const filterConditions = niches.map(niche => ({
+      or: [
+        { "nicho 1": { eq: niche } },
+        { "nicho 2": { eq: niche } },
+        { "nicho 3": { eq: niche } }
+      ]
+    }));
 
-    // Apply the OR conditions
-    const { data: allDates, error: dbError } = await query.or(orConditions);
+    // Apply the filter conditions
+    const { data: allDates, error: dbError } = await query.or(
+      filterConditions.map(condition => condition.or.map(c => c)).flat()
+    );
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
