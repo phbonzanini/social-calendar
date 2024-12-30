@@ -9,17 +9,22 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  console.log('Function called with method:', req.method);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: corsHeaders,
+      status: 204
+    });
   }
 
   try {
     const { niches } = await req.json();
-    console.log('Buscando datas para os nichos:', niches);
-
+    console.log('Received niches:', niches);
+    
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
-      throw new Error('Nichos inválidos ou não fornecidos');
+      throw new Error('Invalid or empty niches array provided');
     }
 
     // Configurar cliente Supabase
@@ -27,25 +32,27 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    console.log('Fetching dates from database...');
+    
     // Buscar todas as datas da tabela
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
 
     if (dbError) {
-      console.error('Erro ao buscar datas do Supabase:', dbError);
+      console.error('Database error:', dbError);
       throw dbError;
     }
 
     if (!allDates || allDates.length === 0) {
-      console.log('Nenhuma data encontrada na tabela');
+      console.log('No dates found in database');
       return new Response(
         JSON.stringify({ dates: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Total de datas encontradas no Supabase:', allDates.length);
+    console.log(`Found ${allDates.length} dates in database`);
 
     // Preparar as datas para o ChatGPT
     const formattedDates = allDates.map(date => ({
@@ -58,9 +65,15 @@ serve(async (req) => {
       nicho3: date["nicho 3"]
     }));
 
+    if (!Deno.env.get('OPENAI_API_KEY')) {
+      throw new Error('OpenAI API key not configured');
+    }
+
     const openai = new OpenAI({
       apiKey: Deno.env.get('OPENAI_API_KEY')!,
     });
+
+    console.log('Calling OpenAI API...');
 
     const prompt = `
     Você é um assistente especializado em filtrar datas comemorativas para negócios. Sua tarefa é analisar uma lista de datas e retornar APENAS aquelas que têm uma conexão DIRETA e COMERCIALMENTE RELEVANTE com os nichos especificados.
@@ -103,35 +116,40 @@ serve(async (req) => {
     });
 
     const response = completion.choices[0].message.content;
-    console.log('Resposta do ChatGPT:', response);
+    console.log('OpenAI response received');
 
     if (!response) {
-      throw new Error('Resposta vazia do ChatGPT');
+      throw new Error('Empty response from OpenAI');
     }
 
     const filteredDates = JSON.parse(response).dates || [];
-    console.log('Datas filtradas:', filteredDates);
+    console.log(`Filtered ${filteredDates.length} relevant dates`);
 
     return new Response(
-      JSON.stringify({ dates: filteredDates }),
+      JSON.stringify({ dates: filteredDates }), 
       { 
         headers: { 
           ...corsHeaders,
           'Content-Type': 'application/json'
-        } 
+        },
+        status: 200
       }
     );
 
   } catch (error) {
-    console.error('Erro na função:', error);
+    console.error('Error in function:', error);
+    
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: 'Erro ao processar a busca de datas.'
-      }), 
-      { 
+      JSON.stringify({
+        error: error.message || 'An error occurred while processing your request',
+        details: error.stack || 'No stack trace available'
+      }),
+      {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        }
       }
     );
   }
