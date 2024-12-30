@@ -6,8 +6,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Content-Type': 'application/json'
 };
 
 serve(async (req) => {
@@ -34,25 +32,14 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Fetching dates from database...');
-    
-    // Build the OR conditions for each niche
-    const nicheConditions = niches.map(niche => `
-      "nicho 1" = '${niche}' OR 
-      "nicho 2" = '${niche}' OR 
-      "nicho 3" = '${niche}'
-    `).join(' OR ');
 
-    const query = `
-      SELECT data, descrição as title, tipo as category
-      FROM datas_2025
-      WHERE ${nicheConditions}
-      ORDER BY data ASC
-    `;
-
+    // Using Supabase query builder instead of raw SQL
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo, "nicho 1", "nicho 2", "nicho 3"')
-      .or(nicheConditions);
+      .or(niches.map(niche => 
+        `or("nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche})`
+      ).join(','));
 
     if (dbError) {
       console.error('Database error:', dbError);
