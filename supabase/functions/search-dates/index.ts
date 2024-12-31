@@ -23,21 +23,19 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseKey || !openaiApiKey) {
       throw new Error('Variáveis de ambiente não configuradas');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('Buscando datas no banco de dados...');
+    console.log('Buscando todas as datas no banco de dados...');
 
-    // Construir a query usando filter
+    // Primeiro, buscar todas as datas do banco
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('*')
-      .or(`nicho 1.eq.${niches[0]},nicho 2.eq.${niches[0]},nicho 3.eq.${niches[0]}`);
-
-    console.log('Query executada, número de datas encontradas:', allDates?.length || 0);
+      .select('*');
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
@@ -52,19 +50,19 @@ serve(async (req) => {
       );
     }
 
-    console.log('Datas encontradas:', allDates);
+    console.log(`Encontradas ${allDates.length} datas no total`);
 
-    // Formatar as datas para processamento
+    // Formatar as datas para o GPT
     const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo || 'commemorative',
-      description: date.descrição
+      description: date.descrição,
+      niches: [date['nicho 1'], date['nicho 2'], date['nicho 3']].filter(Boolean)
     }));
 
-    // Usar OpenAI para filtrar as datas mais relevantes
     const openai = new OpenAI({
-      apiKey: Deno.env.get('OPENAI_API_KEY')
+      apiKey: openaiApiKey
     });
 
     const prompt = `
@@ -75,6 +73,7 @@ serve(async (req) => {
     2. Exclua datas com conexões indiretas ou subjetivas
     3. A data deve representar uma clara oportunidade de negócio
     4. Mantenha a descrição original da data
+    5. Se uma data já tem um dos nichos solicitados em seus campos nicho1, nicho2 ou nicho3, DEVE ser incluída automaticamente
 
     Datas disponíveis:
     ${JSON.stringify(formattedDates)}
@@ -91,8 +90,10 @@ serve(async (req) => {
       ]
     }`;
 
+    console.log('Enviando prompt para o GPT...');
+
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-1106-preview",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
@@ -108,10 +109,10 @@ serve(async (req) => {
     });
 
     const response = completion.choices[0].message.content;
-    console.log('Resposta do OpenAI recebida');
+    console.log('Resposta do GPT recebida');
 
     if (!response) {
-      throw new Error('Resposta vazia do OpenAI');
+      throw new Error('Resposta vazia do GPT');
     }
 
     const filteredDates = JSON.parse(response).dates || [];
