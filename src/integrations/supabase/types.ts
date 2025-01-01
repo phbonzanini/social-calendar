@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       cadastros: {
         Row: {
+          cargo: string | null
           created_at: string
           email: string | null
           id_user: number
@@ -18,6 +19,7 @@ export type Database = {
           telefone: number | null
         }
         Insert: {
+          cargo?: string | null
           created_at?: string
           email?: string | null
           id_user?: number
@@ -25,6 +27,7 @@ export type Database = {
           telefone?: number | null
         }
         Update: {
+          cargo?: string | null
           created_at?: string
           email?: string | null
           id_user?: number

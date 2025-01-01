@@ -9,6 +9,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 
 interface RegistrationDialogProps {
@@ -16,6 +23,14 @@ interface RegistrationDialogProps {
   onOpenChange: (open: boolean) => void;
   selectedNiches: string[];
 }
+
+const roles = [
+  "Social media",
+  "Analista de marketing",
+  "Head/Gerente de marketing",
+  "CMO",
+  "Outros"
+] as const;
 
 export const RegistrationDialog = ({
   open,
@@ -26,12 +41,13 @@ export const RegistrationDialog = ({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [role, setRole] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || !email || !phone) {
+    if (!name || !email || !phone || !role) {
       toast.error("Por favor, preencha todos os campos");
       return;
     }
@@ -46,6 +62,7 @@ export const RegistrationDialog = ({
             nome: name,
             email: email,
             telefone: Number(phone.replace(/\D/g, "")), // Remove non-numeric characters
+            cargo: role,
           },
         ]);
 
@@ -68,7 +85,7 @@ export const RegistrationDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-center">Complete seu cadastro</DialogTitle>
+          <DialogTitle className="text-center">Para começarmos, conte um pouco sobre você...</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -96,6 +113,20 @@ export const RegistrationDialog = ({
               onChange={(e) => setPhone(e.target.value)}
               className="w-full"
             />
+          </div>
+          <div>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione seu cargo" />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.map((roleOption) => (
+                  <SelectItem key={roleOption} value={roleOption}>
+                    {roleOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <p className="text-sm text-neutral">
             Ao clicar em prosseguir, você concorda com nossos termos de uso.
