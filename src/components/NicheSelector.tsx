@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Check, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 import {
   Command,
   CommandEmpty,
@@ -16,6 +15,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
+import { RegistrationDialog } from "./RegistrationDialog";
 
 export const niches = [
   { value: "education", label: "Educação" },
@@ -48,7 +48,7 @@ export const niches = [
 export const NicheSelector = () => {
   const [open, setOpen] = useState(false);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
-  const navigate = useNavigate();
+  const [showRegistration, setShowRegistration] = useState(false);
 
   const toggleNiche = (value: string) => {
     setSelectedNiches((current) =>
@@ -64,16 +64,7 @@ export const NicheSelector = () => {
       return;
     }
 
-    try {
-      navigate("/calendar", { 
-        state: { 
-          selectedNiches: selectedNiches.map(niche => niche.trim()) 
-        } 
-      });
-    } catch (error) {
-      console.error("Navigation error:", error);
-      toast.error("Erro ao gerar calendário. Tente novamente.");
-    }
+    setShowRegistration(true);
   };
 
   return (
@@ -133,6 +124,12 @@ export const NicheSelector = () => {
         <Calendar className="mr-2" />
         Gerar Calendário
       </Button>
+
+      <RegistrationDialog
+        open={showRegistration}
+        onOpenChange={setShowRegistration}
+        selectedNiches={selectedNiches}
+      />
     </div>
   );
 };
