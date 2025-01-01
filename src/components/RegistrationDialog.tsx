@@ -44,6 +44,12 @@ export const RegistrationDialog = ({
   const [role, setRole] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Only allow numbers
+    const value = e.target.value.replace(/\D/g, "");
+    setPhone(value);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -61,7 +67,7 @@ export const RegistrationDialog = ({
           {
             nome: name,
             email: email,
-            telefone: Number(phone.replace(/\D/g, "")), // Remove non-numeric characters
+            telefone: Number(phone),
             cargo: role,
           },
         ]);
@@ -110,16 +116,18 @@ export const RegistrationDialog = ({
               type="tel"
               placeholder="Telefone"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={handlePhoneChange}
               className="w-full"
+              inputMode="numeric"
+              pattern="[0-9]*"
             />
           </div>
           <div>
             <Select value={role} onValueChange={setRole}>
-              <SelectTrigger className="w-full">
+              <SelectTrigger className="w-full bg-white">
                 <SelectValue placeholder="Selecione seu cargo" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 {roles.map((roleOption) => (
                   <SelectItem key={roleOption} value={roleOption}>
                     {roleOption}
