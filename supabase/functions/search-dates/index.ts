@@ -8,6 +8,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const universalDates = [
+  "Dia do Cliente",
+  "Dia das Mães",
+  "Dia dos Pais",
+  "Natal",
+  "Ano Novo",
+  "Black Friday",
+  "Cyber Monday",
+  "Dia dos Namorados",
+  "Dia das Crianças",
+];
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -32,7 +44,6 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     console.log('Buscando todas as datas no banco de dados...');
 
-    // Primeiro, buscar todas as datas do banco
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
@@ -66,14 +77,23 @@ serve(async (req) => {
     });
 
     const prompt = `
-    Analise estas datas comemorativas e retorne APENAS as que têm conexão DIRETA e COMERCIAL com os nichos: ${niches.join(', ')}.
+    Analise estas datas comemorativas e retorne as datas relevantes seguindo estas regras:
+
+    1. INCLUA AUTOMATICAMENTE todas as datas que são:
+       - Feriados nacionais
+       - Pontos facultativos
+       - Datas universais como: ${universalDates.join(', ')}
+       
+    2. Para as demais datas, inclua as que têm conexão DIRETA e COMERCIAL com os nichos: ${niches.join(', ')}.
 
     REGRAS IMPORTANTES:
-    1. Retorne SOMENTE datas com relevância comercial DIRETA para os nichos
-    2. Exclua datas com conexões indiretas ou subjetivas
-    3. A data deve representar uma clara oportunidade de negócio
-    4. Mantenha a descrição original da data
-    5. Se uma data já tem um dos nichos solicitados em seus campos nicho1, nicho2 ou nicho3, DEVE ser incluída automaticamente
+    1. Feriados nacionais e pontos facultativos DEVEM ser incluídos sempre
+    2. Datas universais listadas acima DEVEM ser incluídas sempre
+    3. Para outras datas, retorne SOMENTE as com relevância comercial DIRETA para os nichos
+    4. Exclua datas com conexões indiretas ou subjetivas
+    5. A data deve representar uma clara oportunidade de negócio
+    6. Mantenha a descrição original da data
+    7. Se uma data já tem um dos nichos solicitados em seus campos nicho1, nicho2 ou nicho3, DEVE ser incluída automaticamente
 
     Datas disponíveis:
     ${JSON.stringify(formattedDates)}
@@ -97,7 +117,7 @@ serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: "Você é um especialista em filtrar datas comemorativas para negócios. Seja EXTREMAMENTE rigoroso e retorne apenas datas com conexão DIRETA e COMERCIAL com os nichos solicitados."
+          content: "Você é um especialista em filtrar datas comemorativas para negócios. Inclua SEMPRE feriados nacionais, pontos facultativos e datas universais de varejo, além das datas específicas para os nichos solicitados."
         },
         {
           role: "user",
