@@ -1,43 +1,16 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
-interface Campaign {
-  id: number;
-  nome: string;
-  data_inicio: string;
-  data_fim: string;
-  objetivo?: string;
-  descricao?: string;
-  data_comemorativa?: string;
-}
-
-// Updated schema to match database requirements
-const formSchema = z.object({
-  nome: z.string().min(1, "Nome é obrigatório"),
-  data_inicio: z.string().min(1, "Data de início é obrigatória"),
-  data_fim: z.string().min(1, "Data de fim é obrigatória"),
-  objetivo: z.string().optional(),
-  descricao: z.string().optional(),
-  data_comemorativa: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
+import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import { CampaignList } from "@/components/campaigns/CampaignList";
+import { CampaignForm } from "@/components/campaigns/CampaignForm";
+import { Campaign } from "@/types/campaign";
+import { useEffect } from "react";
 
 const Campaigns = () => {
   const location = useLocation();
@@ -49,14 +22,9 @@ const Campaigns = () => {
     queryKey: ["campaigns"],
     queryFn: async () => {
       const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.user.id) {
-        throw new Error("User not authenticated");
-      }
-
       const { data, error } = await supabase
         .from("campanhas_marketing")
         .select("*")
-        .eq('id_user', session.session.user.id)
         .order("data_inicio", { ascending: true });
 
       if (error) throw error;
@@ -64,31 +32,52 @@ const Campaigns = () => {
     },
   });
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nome: "",
-      data_inicio: "",
-      data_fim: "",
-      objetivo: "",
-      descricao: "",
-      data_comemorativa: "",
-    },
-  });
+  // Create campaigns automatically from selected dates
+  useEffect(() => {
+    const createCampaignsFromDates = async () => {
+      if (selectedDates && selectedDates.length > 0) {
+        try {
+          const { data: session } = await supabase.auth.getSession();
+          
+          const campaignsToCreate = selectedDates.map((date: any) => ({
+            nome: date.title,
+            data_inicio: date.date,
+            data_fim: date.date,
+            descricao: date.description,
+            data_comemorativa: date.title,
+            id_user: session?.session?.user?.id || null
+          }));
 
-  const onSubmit = async (values: FormValues) => {
+          const { error } = await supabase
+            .from("campanhas_marketing")
+            .insert(campaignsToCreate);
+
+          if (error) throw error;
+
+          toast({
+            title: "Campanhas criadas com sucesso!",
+            description: "Suas campanhas foram adicionadas ao calendário.",
+          });
+
+          refetch();
+        } catch (error) {
+          console.error("Erro ao criar campanhas:", error);
+          toast({
+            title: "Erro ao criar campanhas",
+            description: "Não foi possível criar as campanhas. Tente novamente.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    createCampaignsFromDates();
+  }, [selectedDates, toast, refetch]);
+
+  const onSubmit = async (values: Omit<Campaign, "id">) => {
     try {
       const { data: session } = await supabase.auth.getSession();
-      if (!session.session?.user.id) {
-        toast({
-          title: "Erro ao criar campanha",
-          description: "Você precisa estar logado para criar uma campanha.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Ensure all required fields are present
+      
       const campaignData = {
         nome: values.nome,
         data_inicio: values.data_inicio,
@@ -96,7 +85,7 @@ const Campaigns = () => {
         objetivo: values.objetivo || null,
         descricao: values.descricao || null,
         data_comemorativa: values.data_comemorativa || null,
-        id_user: session.session.user.id,
+        id_user: session?.session?.user?.id || null
       };
 
       const { error } = await supabase
@@ -110,7 +99,6 @@ const Campaigns = () => {
         description: "Sua campanha foi adicionada ao calendário.",
       });
 
-      form.reset();
       refetch();
     } catch (error) {
       console.error("Erro ao criar campanha:", error);
@@ -153,78 +141,7 @@ const Campaigns = () => {
                     Nova Campanha
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Criar Nova Campanha</DialogTitle>
-                  </DialogHeader>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                      <FormField
-                        control={form.control}
-                        name="nome"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome da Campanha</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="data_inicio"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Data de Início</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="data_fim"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Data de Fim</FormLabel>
-                            <FormControl>
-                              <Input type="date" {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="objetivo"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Objetivo</FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="descricao"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Descrição</FormLabel>
-                            <FormControl>
-                              <Textarea {...field} />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <Button type="submit" className="w-full">
-                        Criar Campanha
-                      </Button>
-                    </form>
-                  </Form>
-                </DialogContent>
+                <CampaignForm onSubmit={onSubmit} />
               </Dialog>
               <Button
                 onClick={() => navigate("/final-calendar")}
@@ -237,49 +154,7 @@ const Campaigns = () => {
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="flex items-center justify-center min-h-[200px]">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : campaigns && campaigns.length > 0 ? (
-          <div className="grid gap-4 md:grid-cols-2">
-            {campaigns.map((campaign) => (
-              <Card key={campaign.id}>
-                <CardHeader>
-                  <CardTitle>{campaign.nome}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      Período: {format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - {format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
-                    {campaign.objetivo && (
-                      <p className="text-sm">
-                        <strong>Objetivo:</strong> {campaign.objetivo}
-                      </p>
-                    )}
-                    {campaign.descricao && (
-                      <p className="text-sm">
-                        <strong>Descrição:</strong> {campaign.descricao}
-                      </p>
-                    )}
-                    {campaign.data_comemorativa && (
-                      <p className="text-sm">
-                        <strong>Data Comemorativa:</strong> {campaign.data_comemorativa}
-                      </p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-muted-foreground">
-              Nenhuma campanha criada ainda. Clique em "Nova Campanha" para começar.
-            </p>
-          </div>
-        )}
+        <CampaignList campaigns={campaigns} isLoading={isLoading} />
       </div>
     </motion.div>
   );
