@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
@@ -32,6 +32,13 @@ const roles = [
   "Outros"
 ] as const;
 
+interface UserData {
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
 export const RegistrationDialog = ({
   open,
   onOpenChange,
@@ -44,8 +51,19 @@ export const RegistrationDialog = ({
   const [role, setRole] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Load saved user data when component mounts
+  useEffect(() => {
+    const savedUserData = localStorage.getItem("userData");
+    if (savedUserData) {
+      const userData: UserData = JSON.parse(savedUserData);
+      setName(userData.name);
+      setEmail(userData.email);
+      setPhone(userData.phone);
+      setRole(userData.role);
+    }
+  }, []);
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Only allow numbers
     const value = e.target.value.replace(/\D/g, "");
     setPhone(value);
   };
@@ -73,6 +91,15 @@ export const RegistrationDialog = ({
         ]);
 
       if (error) throw error;
+
+      // Save user data to localStorage after successful submission
+      const userData: UserData = {
+        name,
+        email,
+        phone,
+        role,
+      };
+      localStorage.setItem("userData", JSON.stringify(userData));
 
       navigate("/calendar", { 
         state: { 
