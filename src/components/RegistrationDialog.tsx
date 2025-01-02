@@ -87,6 +87,7 @@ export const RegistrationDialog = ({
             email: email,
             telefone: Number(phone),
             cargo: role,
+            nichos: selectedNiches.join(", "), // Add selected niches as comma-separated string
           },
         ]);
 
