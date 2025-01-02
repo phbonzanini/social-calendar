@@ -21,7 +21,6 @@ const Campaigns = () => {
   const { data: campaigns, isLoading, refetch } = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
-      const { data: session } = await supabase.auth.getSession();
       const { data, error } = await supabase
         .from("campanhas_marketing")
         .select("*")
@@ -39,7 +38,15 @@ const Campaigns = () => {
         try {
           const { data: session } = await supabase.auth.getSession();
           
-          const campaignsToCreate = selectedDates.map((date: any) => ({
+          // Filter out dates that already have campaigns
+          const existingDates = campaigns?.map(campaign => campaign.data_comemorativa) || [];
+          const newDates = selectedDates.filter(
+            (date: any) => !existingDates.includes(date.title)
+          );
+
+          if (newDates.length === 0) return;
+
+          const campaignsToCreate = newDates.map((date: any) => ({
             nome: date.title,
             data_inicio: date.date,
             data_fim: date.date,
@@ -72,7 +79,7 @@ const Campaigns = () => {
     };
 
     createCampaignsFromDates();
-  }, [selectedDates, toast, refetch]);
+  }, [selectedDates, campaigns, toast, refetch]);
 
   const onSubmit = async (values: Omit<Campaign, "id">) => {
     try {

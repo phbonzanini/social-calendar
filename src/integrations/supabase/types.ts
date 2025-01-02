@@ -47,7 +47,7 @@ export type Database = {
           data_inicio: string
           descricao: string | null
           id: number
-          id_user: string
+          id_user: number | null
           nome: string
           objetivo: string | null
         }
@@ -58,7 +58,7 @@ export type Database = {
           data_inicio: string
           descricao?: string | null
           id?: number
-          id_user: string
+          id_user?: number | null
           nome: string
           objetivo?: string | null
         }
@@ -69,11 +69,19 @@ export type Database = {
           data_inicio?: string
           descricao?: string | null
           id?: number
-          id_user?: string
+          id_user?: number | null
           nome?: string
           objetivo?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campanhas_marketing_id_user_fkey"
+            columns: ["id_user"]
+            isOneToOne: false
+            referencedRelation: "cadastros"
+            referencedColumns: ["id_user"]
+          },
+        ]
       }
       datas_2025: {
         Row: {

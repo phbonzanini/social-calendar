@@ -31,7 +31,7 @@ export const CampaignList = ({ campaigns, isLoading }: CampaignListProps) => {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {campaigns.map((campaign) => (
-        <Card key={campaign.id}>
+        <Card key={campaign.id} className="bg-neutral-light/50 backdrop-blur-sm">
           <CardHeader>
             <CardTitle>{campaign.nome}</CardTitle>
           </CardHeader>

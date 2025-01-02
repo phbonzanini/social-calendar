@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Download, FileDown, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Logo } from "@/components/Logo";
@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import jsPDF from "jspdf";
 
 interface Campaign {
   id: number;
@@ -42,6 +43,92 @@ const FinalCalendar = () => {
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
+  const downloadPDF = () => {
+    const pdf = new jsPDF();
+    let yPosition = 20;
+
+    // Add title
+    pdf.setFontSize(16);
+    pdf.text("Calendário de Campanhas 2025", 20, yPosition);
+    yPosition += 20;
+
+    months.forEach((month, monthIndex) => {
+      const monthCampaigns = campaigns?.filter(campaign => {
+        const startDate = new Date(campaign.data_inicio);
+        return startDate.getMonth() === monthIndex && startDate.getFullYear() === 2025;
+      });
+
+      if (monthCampaigns && monthCampaigns.length > 0) {
+        // Add month header
+        pdf.setFontSize(14);
+        pdf.text(month, 20, yPosition);
+        yPosition += 10;
+
+        // Add campaigns
+        pdf.setFontSize(10);
+        monthCampaigns.forEach(campaign => {
+          if (yPosition > 280) {
+            pdf.addPage();
+            yPosition = 20;
+          }
+
+          pdf.text(`${campaign.nome}`, 30, yPosition);
+          yPosition += 5;
+          pdf.text(
+            `${format(new Date(campaign.data_inicio), "dd/MM", { locale: ptBR })} - ${format(new Date(campaign.data_fim), "dd/MM", { locale: ptBR })}`,
+            30,
+            yPosition
+          );
+          yPosition += 10;
+        });
+      }
+    });
+
+    pdf.save("calendario-campanhas-2025.pdf");
+    toast({
+      title: "Download concluído",
+      description: "O calendário foi baixado em formato PDF.",
+    });
+  };
+
+  const downloadCSV = () => {
+    const headers = ["Mês", "Campanha", "Data Início", "Data Fim", "Descrição"];
+    const rows = months.map(month => {
+      const monthCampaigns = campaigns?.filter(campaign => {
+        const startDate = new Date(campaign.data_inicio);
+        return startDate.getMonth() === months.indexOf(month) && startDate.getFullYear() === 2025;
+      });
+
+      if (!monthCampaigns?.length) return [];
+
+      return monthCampaigns.map(campaign => [
+        month,
+        campaign.nome,
+        format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR }),
+        format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR }),
+        campaign.descricao || ""
+      ]);
+    }).flat();
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "calendario-campanhas-2025.csv";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Download concluído",
+      description: "O calendário foi baixado em formato CSV.",
+    });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -58,13 +145,33 @@ const FinalCalendar = () => {
             <h1 className="text-3xl font-bold text-neutral-dark">
               Calendário de Campanhas 2025
             </h1>
-            <Button
-              onClick={() => navigate("/campaigns")}
-              variant="outline"
-              size="sm"
-            >
-              Voltar às Campanhas
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={() => navigate("/campaigns")}
+                variant="outline"
+                size="sm"
+              >
+                Voltar às Campanhas
+              </Button>
+              <Button
+                onClick={downloadPDF}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Baixar PDF
+              </Button>
+              <Button
+                onClick={downloadCSV}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <FileDown className="h-4 w-4" />
+                Baixar CSV
+              </Button>
+            </div>
           </div>
         </div>
 
