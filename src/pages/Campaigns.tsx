@@ -27,6 +27,7 @@ interface Campaign {
   data_comemorativa?: string;
 }
 
+// Updated schema to match database requirements
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   data_inicio: z.string().min(1, "Data de início é obrigatória"),
@@ -35,6 +36,8 @@ const formSchema = z.object({
   descricao: z.string().optional(),
   data_comemorativa: z.string().optional(),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 const Campaigns = () => {
   const location = useLocation();
@@ -61,7 +64,7 @@ const Campaigns = () => {
     },
   });
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       nome: "",
@@ -73,7 +76,7 @@ const Campaigns = () => {
     },
   });
 
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session.session?.user.id) {
@@ -85,12 +88,20 @@ const Campaigns = () => {
         return;
       }
 
-      const { error } = await supabase.from("campanhas_marketing").insert([
-        {
-          ...values,
-          id_user: session.session.user.id,
-        },
-      ]);
+      // Ensure all required fields are present
+      const campaignData = {
+        nome: values.nome,
+        data_inicio: values.data_inicio,
+        data_fim: values.data_fim,
+        objetivo: values.objetivo || null,
+        descricao: values.descricao || null,
+        data_comemorativa: values.data_comemorativa || null,
+        id_user: session.session.user.id,
+      };
+
+      const { error } = await supabase
+        .from("campanhas_marketing")
+        .insert([campaignData]);
 
       if (error) throw error;
 
