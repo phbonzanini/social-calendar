@@ -45,9 +45,15 @@ const Campaigns = () => {
   const { data: campaigns, isLoading, refetch } = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user.id) {
+        throw new Error("User not authenticated");
+      }
+
       const { data, error } = await supabase
         .from("campanhas_marketing")
         .select("*")
+        .eq('id_user', session.session.user.id)
         .order("data_inicio", { ascending: true });
 
       if (error) throw error;
@@ -69,14 +75,20 @@ const Campaigns = () => {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user.id) {
+        toast({
+          title: "Erro ao criar campanha",
+          description: "Você precisa estar logado para criar uma campanha.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase.from("campanhas_marketing").insert([
         {
-          nome: values.nome,
-          data_inicio: values.data_inicio,
-          data_fim: values.data_fim,
-          objetivo: values.objetivo,
-          descricao: values.descricao,
-          data_comemorativa: values.data_comemorativa,
+          ...values,
+          id_user: session.session.user.id,
         },
       ]);
 
