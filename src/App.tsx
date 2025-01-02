@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import SelectNiche from "./pages/SelectNiche";
 import Calendar from "./pages/Calendar";
+import Campaigns from "./pages/Campaigns";
+import FinalCalendar from "./pages/FinalCalendar";
 import { FeedbackButton } from "./components/FeedbackButton";
 
 const queryClient = new QueryClient({
@@ -29,6 +31,8 @@ const App = () => {
             <Route path="/" element={<Index />} />
             <Route path="/select-niche" element={<SelectNiche />} />
             <Route path="/calendar" element={<Calendar />} />
+            <Route path="/campaigns" element={<Campaigns />} />
+            <Route path="/final-calendar" element={<FinalCalendar />} />
           </Routes>
           <FeedbackButton />
         </BrowserRouter>

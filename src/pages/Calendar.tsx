@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { CalendarCard } from "@/components/calendar/CalendarCard";
 import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface CalendarDate {
   date: string;
@@ -64,8 +66,10 @@ const LoadingState = () => (
 
 const Calendar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const selectedNiches = location.state?.selectedNiches || [];
+  const [selectedDates, setSelectedDates] = useState<CalendarDate[]>([]);
 
   const { data: dates, isLoading, error } = useQuery({
     queryKey: ["calendar-dates", selectedNiches],
@@ -82,6 +86,29 @@ const Calendar = () => {
     },
   });
 
+  const handleDateSelect = (date: CalendarDate) => {
+    setSelectedDates(prev => {
+      const isSelected = prev.some(d => d.date === date.date);
+      if (isSelected) {
+        return prev.filter(d => d.date !== date.date);
+      } else {
+        return [...prev, date];
+      }
+    });
+  };
+
+  const handleContinue = () => {
+    if (selectedDates.length === 0) {
+      toast({
+        title: "Selecione pelo menos uma data",
+        description: "Por favor, selecione as datas que deseja incluir em suas campanhas.",
+        variant: "destructive",
+      });
+      return;
+    }
+    navigate("/campaigns", { state: { selectedDates } });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -93,9 +120,7 @@ const Calendar = () => {
         <Logo />
       </div>
       <div className="max-w-4xl mx-auto pt-16">
-        <CalendarHeader
-          selectedNiches={selectedNiches}
-        />
+        <CalendarHeader selectedNiches={selectedNiches} />
         {error ? (
           <div className="min-h-[200px] flex items-center justify-center">
             <p className="text-red-600">
@@ -109,11 +134,28 @@ const Calendar = () => {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {dates?.map((date, index) => (
-              <CalendarCard key={`${date.date}-${index}`} date={date} index={index} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {dates?.map((date, index) => (
+                <CalendarCard
+                  key={`${date.date}-${index}`}
+                  date={date}
+                  index={index}
+                  isSelected={selectedDates.some(d => d.date === date.date)}
+                  onSelect={() => handleDateSelect(date)}
+                />
+              ))}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button
+                onClick={handleContinue}
+                size="lg"
+                className="px-8"
+              >
+                Continuar para Campanhas
+              </Button>
+            </div>
+          </>
         )}
       </div>
     </motion.div>
