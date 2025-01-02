@@ -39,6 +39,42 @@ export type Database = {
         }
         Relationships: []
       }
+      campanhas_marketing: {
+        Row: {
+          created_at: string | null
+          data_comemorativa: string | null
+          data_fim: string
+          data_inicio: string
+          descricao: string | null
+          id: number
+          id_user: string
+          nome: string
+          objetivo: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_comemorativa?: string | null
+          data_fim: string
+          data_inicio: string
+          descricao?: string | null
+          id?: number
+          id_user: string
+          nome: string
+          objetivo?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_comemorativa?: string | null
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string | null
+          id?: number
+          id_user?: string
+          nome?: string
+          objetivo?: string | null
+        }
+        Relationships: []
+      }
       datas_2025: {
         Row: {
           created_at: string

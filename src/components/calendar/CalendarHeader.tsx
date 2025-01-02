@@ -1,18 +1,14 @@
 import { Button } from "@/components/ui/button";
-import { FileDown, FileSpreadsheet, Settings2 } from "lucide-react";
+import { Settings2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { niches } from "@/components/NicheSelector";
 
 interface CalendarHeaderProps {
   selectedNiches: string[];
-  onExportPDF: () => void;
-  onExportCSV: () => void;
 }
 
 export const CalendarHeader = ({
   selectedNiches,
-  onExportPDF,
-  onExportCSV,
 }: CalendarHeaderProps) => {
   const navigate = useNavigate();
 
@@ -28,24 +24,6 @@ export const CalendarHeader = ({
           Seu Calendário Personalizado
         </h1>
         <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
-          <Button
-            onClick={onExportPDF}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <FileDown className="h-4 w-4" />
-            PDF
-          </Button>
-          <Button
-            onClick={onExportCSV}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            CSV
-          </Button>
           <Button
             onClick={() => navigate("/select-niche")}
             variant="outline"

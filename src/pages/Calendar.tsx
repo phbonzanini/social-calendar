@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { CalendarCard } from "@/components/calendar/CalendarCard";
-import { exportToPDF, exportToCSV } from "@/utils/exportUtils";
 import { Logo } from "@/components/Logo";
 
 interface CalendarDate {
@@ -83,24 +82,6 @@ const Calendar = () => {
     },
   });
 
-  const handleExportPDF = () => {
-    if (!dates || dates.length === 0) return;
-    exportToPDF(dates, selectedNiches);
-    toast({
-      title: "PDF gerado com sucesso",
-      description: "O arquivo foi baixado para o seu dispositivo.",
-    });
-  };
-
-  const handleExportCSV = () => {
-    if (!dates || dates.length === 0) return;
-    exportToCSV(dates);
-    toast({
-      title: "CSV gerado com sucesso",
-      description: "O arquivo foi baixado para o seu dispositivo.",
-    });
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -114,8 +95,6 @@ const Calendar = () => {
       <div className="max-w-4xl mx-auto pt-16">
         <CalendarHeader
           selectedNiches={selectedNiches}
-          onExportPDF={handleExportPDF}
-          onExportCSV={handleExportCSV}
         />
         {error ? (
           <div className="min-h-[200px] flex items-center justify-center">
