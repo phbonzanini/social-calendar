@@ -32,18 +32,26 @@ serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Build the WHERE clause for the niches query
-    const whereClause = niches
-      .map(niche => `"nicho 1" = '${niche}' OR "nicho 2" = '${niche}' OR "nicho 3" = '${niche}'`)
-      .join(' OR ');
+    // Create filter conditions for each niche
+    const filters = niches.map(niche => ({
+      or: [
+        { "nicho 1": { equals: niche } },
+        { "nicho 2": { equals: niche } },
+        { "nicho 3": { equals: niche } }
+      ]
+    }));
 
-    console.log("SQL WHERE clause:", whereClause);
+    console.log("Applying filters:", JSON.stringify(filters, null, 2));
 
     // Fetch relevant dates based on niches
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
-      .or(whereClause);
+      .or(
+        niches.map(niche => 
+          `nicho_1.eq.${niche},nicho_2.eq.${niche},nicho_3.eq.${niche}`
+        ).join(',')
+      );
 
     if (dbError) {
       console.error('Database error:', dbError);
