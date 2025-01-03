@@ -32,26 +32,11 @@ serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Create filter conditions for each niche
-    const filters = niches.map(niche => ({
-      or: [
-        { "nicho 1": { equals: niche } },
-        { "nicho 2": { equals: niche } },
-        { "nicho 3": { equals: niche } }
-      ]
-    }));
-
-    console.log("Applying filters:", JSON.stringify(filters, null, 2));
-
-    // Fetch relevant dates based on niches
+    // Fetch relevant dates based on niches using in operator
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
-      .or(
-        niches.map(niche => 
-          `nicho_1.eq.${niche},nicho_2.eq.${niche},nicho_3.eq.${niche}`
-        ).join(',')
-      );
+      .or(`nicho_1.in.(${niches.map(n => `'${n}'`).join(',')}),nicho_2.in.(${niches.map(n => `'${n}'`).join(',')}),nicho_3.in.(${niches.map(n => `'${n}'`).join(',')})`)
 
     if (dbError) {
       console.error('Database error:', dbError);
