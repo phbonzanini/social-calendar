@@ -1,6 +1,5 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'https://esm.sh/openai@4.28.0';
 
 const corsHeaders = {
@@ -9,17 +8,15 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const { niches } = await req.json();
-    console.log('Buscando datas para os nichos:', niches);
-    
+
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
-      throw new Error('Nenhum nicho selecionado');
+      throw new Error('Niches array is required');
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -27,115 +24,96 @@ serve(async (req) => {
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!supabaseUrl || !supabaseKey || !openaiApiKey) {
-      throw new Error('Variáveis de ambiente não configuradas');
+      throw new Error('Missing environment variables');
     }
 
+    const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('Buscando datas relevantes no banco de dados...');
 
-    // Optimize the query to only fetch necessary fields
-    const { data: allDates, error: dbError } = await supabase
+    console.log('Fetching relevant dates...');
+
+    // Only fetch dates for the selected niches to reduce data
+    const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('data, descrição, tipo, nicho 1, nicho 2, nicho 3')
+      .select('data, descrição, tipo')
+      .or(`nicho1.eq.${niches.join(',')},nicho2.eq.${niches.join(',')},nicho3.eq.${niches.join(',')}`)
       .order('data');
 
     if (dbError) {
-      console.error('Erro no banco de dados:', dbError);
+      console.error('Database error:', dbError);
       throw dbError;
     }
 
-    if (!allDates || allDates.length === 0) {
-      console.log('Nenhuma data encontrada no banco de dados');
+    if (!relevantDates || relevantDates.length === 0) {
+      console.log('No dates found');
       return new Response(
         JSON.stringify({ dates: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Encontradas ${allDates.length} datas no total`);
+    console.log(`Found ${relevantDates.length} dates`);
 
-    // Optimize data structure for GPT
-    const formattedDates = allDates.map(date => ({
-      date: date.data,
-      title: date.descrição,
-      category: date.tipo || 'commemorative',
-      niches: [date['nicho 1'], date['nicho 2'], date['nicho 3']].filter(Boolean)
+    // Simplified data structure
+    const formattedDates = relevantDates.map(date => ({
+      d: date.data,
+      t: date.descrição,
+      c: date.tipo || 'commemorative'
     }));
 
-    const openai = new OpenAI({
-      apiKey: openaiApiKey
-    });
-
     const prompt = `
-    Analise estas datas e retorne apenas as relevantes:
+    Return only relevant dates for these niches: ${niches.join(', ')}
 
-    1. INCLUA:
-       - Feriados nacionais (tipo = 'holiday')
-       - Pontos facultativos (tipo = 'optional')
-       - Datas universais: Dia do Cliente, Dia das Mães, Dia dos Pais, Natal, Ano Novo, Black Friday, Cyber Monday, Dia dos Namorados, Dia das Crianças
-       - Datas com conexão DIRETA aos nichos: ${niches.join(', ')}
+    Rules:
+    1. Include holidays (type='holiday')
+    2. Include optional days (type='optional')
+    3. Include universal dates (Mother's Day, Father's Day, Christmas, New Year, Black Friday)
+    4. Include dates directly related to the niches
+    5. Exclude indirect connections
+    6. Exclude duplicates
 
-    2. EXCLUA:
-       - Datas sem relevância comercial
-       - Conexões indiretas
-       - Datas duplicadas
+    Dates: ${JSON.stringify(formattedDates)}
 
-    Datas disponíveis: ${JSON.stringify(formattedDates)}
+    Return JSON: {"dates":[{"date":"YYYY-MM-DD","title":"Title","category":"Type","description":"Description"}]}
+    `;
 
-    Retorne JSON:
-    {
-      "dates": [
-        {
-          "date": "YYYY-MM-DD",
-          "title": "string",
-          "description": "string",
-          "category": "commemorative | holiday | optional"
-        }
-      ]
-    }`;
-
-    console.log('Enviando prompt para o GPT...');
+    console.log('Sending prompt to GPT...');
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
-          content: "Você é um especialista em filtrar datas comemorativas para negócios. Inclua SEMPRE feriados nacionais, pontos facultativos e datas universais de varejo, além das datas específicas para os nichos solicitados."
+          content: "You are a helpful assistant that filters and returns relevant dates in JSON format."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.1,
-      response_format: { type: "json_object" }
+      temperature: 0.3,
+      max_tokens: 1000,
     });
 
     const response = completion.choices[0].message.content;
-    console.log('Resposta do GPT recebida');
+    console.log('Received response from GPT');
 
-    if (!response) {
-      throw new Error('Resposta vazia do GPT');
+    try {
+      const parsedDates = JSON.parse(response);
+      return new Response(
+        JSON.stringify(parsedDates),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Error parsing GPT response:', error);
+      throw new Error('Invalid response format from GPT');
     }
 
-    const filteredDates = JSON.parse(response).dates || [];
-    console.log(`Filtrado para ${filteredDates.length} datas relevantes`);
-
-    return new Response(
-      JSON.stringify({ dates: filteredDates }), 
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
   } catch (error) {
-    console.error('Erro na função:', error);
-    
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({
-        error: error.message || 'Ocorreu um erro ao processar sua solicitação',
-        details: error.stack || 'Stack trace não disponível'
-      }),
-      {
+      JSON.stringify({ error: error.message, details: error.toString() }),
+      { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
