@@ -72,6 +72,7 @@ const Login = () => {
                   password_input_placeholder: 'Mínimo de 6 caracteres',
                   button_label: 'Entrar',
                   loading_button_label: 'Entrando...',
+                  email_input_placeholder: 'Seu endereço de email',
                 },
                 sign_up: {
                   email_label: 'Email',
@@ -79,6 +80,7 @@ const Login = () => {
                   password_input_placeholder: 'Mínimo de 6 caracteres',
                   button_label: 'Cadastrar',
                   loading_button_label: 'Cadastrando...',
+                  email_input_placeholder: 'Seu endereço de email',
                 },
               },
             }}
