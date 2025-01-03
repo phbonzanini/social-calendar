@@ -33,11 +33,16 @@ serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Build the OR conditions for each niche column
+    const nicheConditions = niches.map(niche => `"nicho 1".eq.${niche},` + 
+                                                `"nicho 2".eq.${niche},` + 
+                                                `"nicho 3".eq.${niche}`).join(',');
+
     // Fetch only relevant dates based on niches
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
-      .or(`nicho1.eq.${niches.join(',')},nicho2.eq.${niches.join(',')},nicho3.eq.${niches.join(',')}`);
+      .or(nicheConditions);
 
     if (dbError) {
       console.error('Database error:', dbError);
@@ -64,7 +69,7 @@ serve(async (req) => {
     `;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4-turbo-preview",
       messages: [
         {
           role: "system",
