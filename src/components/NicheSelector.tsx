@@ -15,7 +15,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { RegistrationDialog } from "./RegistrationDialog";
+import { useNavigate } from "react-router-dom";
 
 export const niches = [
   { value: "education", label: "Educação" },
@@ -48,7 +48,7 @@ export const niches = [
 export const NicheSelector = () => {
   const [open, setOpen] = useState(false);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
-  const [showRegistration, setShowRegistration] = useState(false);
+  const navigate = useNavigate();
 
   const toggleNiche = (value: string) => {
     setSelectedNiches((current) =>
@@ -64,7 +64,7 @@ export const NicheSelector = () => {
       return;
     }
 
-    setShowRegistration(true);
+    navigate("/calendar", { state: { selectedNiches } });
   };
 
   return (
@@ -124,12 +124,6 @@ export const NicheSelector = () => {
         <Calendar className="mr-2" />
         Gerar Calendário
       </Button>
-
-      <RegistrationDialog
-        open={showRegistration}
-        onOpenChange={setShowRegistration}
-        selectedNiches={selectedNiches}
-      />
     </div>
   );
 };
