@@ -11,13 +11,24 @@ const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Check if user is already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate("/");
+      }
+    });
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        if (event === "SIGNED_UP" as AuthChangeEvent) {
+        if (event === "SIGNED_UP") {
           toast.success('Conta criada com sucesso!');
         }
-        if (event === "SIGNED_IN" as AuthChangeEvent) {
+        if (event === "SIGNED_IN") {
           toast.success('Login realizado com sucesso!');
+          navigate("/");
+        }
+        if (event === "SIGNED_OUT") {
+          toast.info('Você foi desconectado');
         }
         if (session?.user) {
           navigate("/");
@@ -69,7 +80,7 @@ const Login = () => {
                 sign_in: {
                   email_label: 'Email',
                   password_label: 'Senha',
-                  password_input_placeholder: 'Mínimo de 6 caracteres',
+                  password_input_placeholder: 'Senha (mínimo 6 caracteres)',
                   button_label: 'Entrar',
                   loading_button_label: 'Entrando...',
                   email_input_placeholder: 'Seu endereço de email',
@@ -77,7 +88,7 @@ const Login = () => {
                 sign_up: {
                   email_label: 'Email',
                   password_label: 'Senha',
-                  password_input_placeholder: 'Mínimo de 6 caracteres',
+                  password_input_placeholder: 'Senha (mínimo 6 caracteres)',
                   button_label: 'Cadastrar',
                   loading_button_label: 'Cadastrando...',
                   email_input_placeholder: 'Seu endereço de email',
