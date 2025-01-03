@@ -40,11 +40,17 @@ serve(async (req) => {
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(`nicho 1.eq.${niches[0]},nicho 2.eq.${niches[0]},nicho 3.eq.${niches[0]}`);
+      .or(niches.map(niche => [
+        `nicho1.eq.${niche}`,
+        `nicho2.eq.${niche}`,
+        `nicho3.eq.${niche}`
+      ]).flat().join(','));
+
+    console.log("Query executada:", relevantDates);
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
-      throw new Error(`Database error: ${dbError.message}`);
+      throw new Error(`Database error: "${dbError.message}"`);
     }
 
     console.log("Datas encontradas:", relevantDates);
