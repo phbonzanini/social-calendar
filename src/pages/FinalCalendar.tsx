@@ -7,16 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { MonthCard } from "@/components/calendar/MonthCard";
 import { CalendarDownloadButtons } from "@/components/calendar/CalendarDownloadButtons";
-
-interface Campaign {
-  id: number;
-  nome: string;
-  data_inicio: string;
-  data_fim: string;
-  objetivo?: string;
-  descricao?: string;
-  data_comemorativa?: string;
-}
+import { Campaign } from "@/types/campaign";
 
 const FinalCalendar = () => {
   const navigate = useNavigate();
@@ -30,7 +21,13 @@ const FinalCalendar = () => {
         .order("data_inicio", { ascending: true });
 
       if (error) throw error;
-      return data as Campaign[];
+      
+      // Filter out duplicates based on campaign ID
+      const uniqueCampaigns = data?.filter((campaign, index, self) =>
+        index === self.findIndex((c) => c.id === campaign.id)
+      );
+
+      return uniqueCampaigns as Campaign[];
     },
   });
 

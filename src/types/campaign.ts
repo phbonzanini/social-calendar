@@ -8,4 +8,5 @@ export interface Campaign {
   data_comemorativa?: string;
   id_user?: number | null;
   created_at?: string;
+  is_from_commemorative?: boolean;
 }
