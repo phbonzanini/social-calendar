@@ -34,23 +34,38 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Create filter conditions for each niche
-    const filterConditions = niches.map(niche => ({
-      or: [
-        { column: 'nicho 1', equals: niche },
-        { column: 'nicho 2', equals: niche },
-        { column: 'nicho 3', equals: niche }
-      ]
-    }));
-
-    console.log("Filtros:", JSON.stringify(filterConditions, null, 2));
-
-    // Query using in operator for better performance
-    const { data: relevantDates, error: dbError } = await supabase
+    // Simplified query approach
+    let { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .in('nicho 1', niches)
-      .or(`nicho 2.in.(${niches.map(n => `'${n}'`).join(',')}),nicho 3.in.(${niches.map(n => `'${n}'`).join(',')})`);
+      .filter('nicho 1', 'in', `(${niches.map(n => `'${n}'`).join(',')})`)
+      .order('data');
+
+    // If no results found with nicho 1, try nicho 2
+    if (!relevantDates?.length) {
+      console.log("Tentando buscar por nicho 2...");
+      const { data: dates2, error: error2 } = await supabase
+        .from('datas_2025')
+        .select('*')
+        .filter('nicho 2', 'in', `(${niches.map(n => `'${n}'`).join(',')})`)
+        .order('data');
+      
+      if (dates2?.length) {
+        relevantDates = dates2;
+      } else {
+        // If still no results, try nicho 3
+        console.log("Tentando buscar por nicho 3...");
+        const { data: dates3, error: error3 } = await supabase
+          .from('datas_2025')
+          .select('*')
+          .filter('nicho 3', 'in', `(${niches.map(n => `'${n}'`).join(',')})`)
+          .order('data');
+        
+        if (dates3?.length) {
+          relevantDates = dates3;
+        }
+      }
+    }
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
@@ -60,7 +75,10 @@ serve(async (req) => {
     if (!relevantDates || relevantDates.length === 0) {
       console.log("Nenhuma data encontrada");
       return new Response(
-        JSON.stringify({ dates: [] }),
+        JSON.stringify({ 
+          dates: [],
+          message: "Nenhuma data encontrada para os nichos selecionados" 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -111,7 +129,10 @@ serve(async (req) => {
   } catch (error) {
     console.error('Erro:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        details: "Erro ao processar a requisição"
+      }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
