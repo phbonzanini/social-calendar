@@ -12,10 +12,10 @@ const Login = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (event === 'SIGNED_UP') {
+        if (event === "SIGNED_UP") {
           toast.success('Conta criada com sucesso!');
         }
-        if (event === 'SIGNED_IN') {
+        if (event === "SIGNED_IN") {
           toast.success('Login realizado com sucesso!');
         }
         if (session) {
@@ -78,8 +78,6 @@ const Login = () => {
                   password_input_placeholder: 'Mínimo de 6 caracteres',
                   button_label: 'Cadastrar',
                   loading_button_label: 'Cadastrando...',
-                  password_error: 'A senha deve ter no mínimo 6 caracteres',
-                  email_error: 'Email inválido',
                 },
               },
             }}
