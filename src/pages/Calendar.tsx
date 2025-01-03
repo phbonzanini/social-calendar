@@ -122,15 +122,23 @@ const Calendar = () => {
       <div className="max-w-4xl mx-auto pt-16">
         <CalendarHeader selectedNiches={selectedNiches} />
         {error ? (
-          <div className="min-h-[200px] flex items-center justify-center">
-            <p className="text-red-600">
+          <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 p-6 bg-red-50 rounded-lg">
+            <p className="text-red-600 text-center">
               Erro ao carregar datas: {error.message}
             </p>
+            {error.cause && (
+              <pre className="text-xs bg-white p-4 rounded overflow-auto max-w-full">
+                {JSON.stringify(error.cause, null, 2)}
+              </pre>
+            )}
           </div>
         ) : !isLoading && (!dates || dates.length === 0) ? (
-          <div className="min-h-[200px] flex items-center justify-center">
-            <p className="text-neutral-dark">
+          <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 p-6 bg-amber-50 rounded-lg">
+            <p className="text-amber-800 text-center">
               Nenhuma data encontrada para os nichos selecionados.
+            </p>
+            <p className="text-sm text-amber-600">
+              Nichos selecionados: {selectedNiches.join(", ")}
             </p>
           </div>
         ) : (

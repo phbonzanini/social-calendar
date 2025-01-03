@@ -34,14 +34,42 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Query using OR conditions for all three niche columns
-    const { data: relevantDates, error: dbError } = await supabase
+    // Primeiro, vamos verificar se há dados na tabela
+    const { data: sampleData, error: sampleError } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(niches.map(niche => `or(nicho 1.eq.${niche},nicho 2.eq.${niche},nicho 3.eq.${niche})`).join(','))
-      .order('data');
+      .limit(5);
 
-    console.log("Query result:", { relevantDates, dbError });
+    console.log("Amostra de dados na tabela:", sampleData);
+    
+    if (sampleError) {
+      console.error("Erro ao verificar dados:", sampleError);
+      throw new Error(`Database sample error: ${sampleError.message}`);
+    }
+
+    // Construir a query usando filter para cada coluna de nicho
+    let query = supabase
+      .from('datas_2025')
+      .select('*');
+
+    // Adicionar condições OR para cada nicho em cada coluna
+    const conditions = [];
+    for (const niche of niches) {
+      conditions.push(
+        `nicho 1.eq.'${niche}'`,
+        `nicho 2.eq.'${niche}'`,
+        `nicho 3.eq.'${niche}'`
+      );
+    }
+
+    // Combinar todas as condições com OR
+    query = query.or(conditions.join(','));
+
+    // Executar a query
+    const { data: relevantDates, error: dbError } = await query;
+
+    console.log("Query executada:", query);
+    console.log("Resultados encontrados:", relevantDates?.length || 0);
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
@@ -49,19 +77,15 @@ serve(async (req) => {
     }
 
     if (!relevantDates || relevantDates.length === 0) {
-      console.log("Nenhuma data encontrada");
-      // Let's check what's in the database
-      const { data: allDates } = await supabase
-        .from('datas_2025')
-        .select('*')
-        .limit(5);
-      console.log("Amostra de datas no banco:", allDates);
-      
+      console.log("Nenhuma data encontrada para os nichos:", niches);
       return new Response(
         JSON.stringify({ 
           dates: [],
           message: "Nenhuma data encontrada para os nichos selecionados",
-          debug: { sampleDates: allDates }
+          debug: { 
+            sampleData,
+            searchedNiches: niches
+          }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -77,7 +101,7 @@ serve(async (req) => {
       description: date.descrição
     }));
 
-    // Use GPT-4o-mini for suggestions
+    // Use GPT-4-mini for suggestions
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const prompt = `
       Com base nestas datas comemorativas e feriados para os nichos ${niches.join(', ')},
@@ -87,7 +111,7 @@ serve(async (req) => {
     `;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4-mini",
       messages: [
         {
           role: "system",
