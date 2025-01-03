@@ -36,15 +36,18 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Construir a query para buscar datas relevantes
+    // Construir condições OR para cada nicho e cada coluna
+    const conditions = niches.flatMap(niche => [
+      `"nicho 1" = '${niche}'`,
+      `"nicho 2" = '${niche}'`,
+      `"nicho 3" = '${niche}'`
+    ]);
+
+    // Construir a query SQL completa
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(niches.map(niche => [
-        `"nicho 1".eq.${niche}`,
-        `"nicho 2".eq.${niche}`,
-        `"nicho 3".eq.${niche}`
-      ]).flat().join(','));
+      .or(conditions.join(','));
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
