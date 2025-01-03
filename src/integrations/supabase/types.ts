@@ -48,6 +48,7 @@ export type Database = {
           descricao: string | null
           id: number
           id_user: number | null
+          is_from_commemorative: boolean | null
           nome: string
           objetivo: string | null
         }
@@ -59,6 +60,7 @@ export type Database = {
           descricao?: string | null
           id?: number
           id_user?: number | null
+          is_from_commemorative?: boolean | null
           nome: string
           objetivo?: string | null
         }
@@ -70,6 +72,7 @@ export type Database = {
           descricao?: string | null
           id?: number
           id_user?: number | null
+          is_from_commemorative?: boolean | null
           nome?: string
           objetivo?: string | null
         }
