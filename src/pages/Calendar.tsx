@@ -34,7 +34,7 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
     if (error) {
       console.error("Erro na função de busca:", error);
-      throw error;
+      throw new Error(`Erro na função de busca: ${error.message}`);
     }
 
     if (!data?.dates) {
@@ -47,7 +47,9 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
 
   } catch (error) {
     console.error("Erro ao buscar datas:", error);
-    throw error;
+    throw error instanceof Error 
+      ? error 
+      : new Error("Erro desconhecido ao buscar datas");
   }
 };
 
@@ -124,13 +126,11 @@ const Calendar = () => {
         {error ? (
           <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 p-6 bg-red-50 rounded-lg">
             <p className="text-red-600 text-center">
-              Erro ao carregar datas: {error.message}
+              Erro ao carregar datas: {error instanceof Error ? error.message : 'Erro desconhecido'}
             </p>
-            {error.cause && (
-              <pre className="text-xs bg-white p-4 rounded overflow-auto max-w-full">
-                {JSON.stringify(error.cause, null, 2)}
-              </pre>
-            )}
+            <pre className="text-xs bg-white p-4 rounded overflow-auto max-w-full">
+              {JSON.stringify(error, null, 2)}
+            </pre>
           </div>
         ) : !isLoading && (!dates || dates.length === 0) ? (
           <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 p-6 bg-amber-50 rounded-lg">
