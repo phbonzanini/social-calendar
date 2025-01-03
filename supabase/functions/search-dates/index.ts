@@ -31,11 +31,13 @@ serve(async (req) => {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
-    console.log('Buscando todas as datas no banco de dados...');
+    console.log('Buscando datas relevantes no banco de dados...');
 
+    // Optimize the query to only fetch necessary fields
     const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('*');
+      .select('data, descrição, tipo, nicho 1, nicho 2, nicho 3')
+      .order('data');
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
@@ -52,12 +54,11 @@ serve(async (req) => {
 
     console.log(`Encontradas ${allDates.length} datas no total`);
 
-    // Formatar as datas para o GPT
+    // Optimize data structure for GPT
     const formattedDates = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
       category: date.tipo || 'commemorative',
-      description: date.descrição,
       niches: [date['nicho 1'], date['nicho 2'], date['nicho 3']].filter(Boolean)
     }));
 
@@ -66,28 +67,22 @@ serve(async (req) => {
     });
 
     const prompt = `
-    Analise estas datas comemorativas e retorne as datas relevantes seguindo estas regras:
+    Analise estas datas e retorne apenas as relevantes:
 
-    1. INCLUA AUTOMATICAMENTE todas as datas que são:
-       - Feriados nacionais
-       - Pontos facultativos
-       - Datas universais como: Dia do Cliente, Dia das Mães, Dia dos Pais, Natal, Ano Novo, Black Friday, Cyber Monday, Dia dos Namorados, Dia das Crianças
-       
-    2. Para as demais datas, inclua as que têm conexão DIRETA e COMERCIAL com os nichos: ${niches.join(', ')}.
+    1. INCLUA:
+       - Feriados nacionais (tipo = 'holiday')
+       - Pontos facultativos (tipo = 'optional')
+       - Datas universais: Dia do Cliente, Dia das Mães, Dia dos Pais, Natal, Ano Novo, Black Friday, Cyber Monday, Dia dos Namorados, Dia das Crianças
+       - Datas com conexão DIRETA aos nichos: ${niches.join(', ')}
 
-    REGRAS IMPORTANTES:
-    1. Feriados nacionais e pontos facultativos DEVEM ser incluídos sempre
-    2. Datas universais listadas acima DEVEM ser incluídas sempre
-    3. Para outras datas, retorne SOMENTE as com relevância comercial DIRETA para os nichos
-    4. Exclua datas com conexões indiretas ou subjetivas
-    5. A data deve representar uma clara oportunidade de negócio
-    6. Mantenha a descrição original da data
-    7. Se uma data já tem um dos nichos solicitados em seus campos nicho1, nicho2 ou nicho3, DEVE ser incluída automaticamente
+    2. EXCLUA:
+       - Datas sem relevância comercial
+       - Conexões indiretas
+       - Datas duplicadas
 
-    Datas disponíveis:
-    ${JSON.stringify(formattedDates)}
+    Datas disponíveis: ${JSON.stringify(formattedDates)}
 
-    Retorne apenas as datas relevantes em formato JSON com os campos:
+    Retorne JSON:
     {
       "dates": [
         {
@@ -102,7 +97,7 @@ serve(async (req) => {
     console.log('Enviando prompt para o GPT...');
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
