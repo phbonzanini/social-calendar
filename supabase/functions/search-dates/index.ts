@@ -8,7 +8,7 @@ console.log("Hello from Search Dates!")
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
@@ -32,18 +32,18 @@ serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Build the OR conditions for each niche with proper column names
-    const nicheConditions = niches.map(niche => 
-      `("nicho 1" = '${niche}' OR "nicho 2" = '${niche}' OR "nicho 3" = '${niche}')`
-    ).join(' OR ');
+    // Build the WHERE clause for the niches query
+    const whereClause = niches
+      .map(niche => `"nicho 1" = '${niche}' OR "nicho 2" = '${niche}' OR "nicho 3" = '${niche}'`)
+      .join(' OR ');
 
-    console.log("SQL conditions:", nicheConditions);
+    console.log("SQL WHERE clause:", whereClause);
 
     // Fetch relevant dates based on niches
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
-      .or(nicheConditions);
+      .or(whereClause);
 
     if (dbError) {
       console.error('Database error:', dbError);
