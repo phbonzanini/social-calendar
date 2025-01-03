@@ -5,13 +5,14 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
+import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 
 const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event: 'INITIAL_SESSION' | 'SIGNED_IN' | 'SIGNED_OUT' | 'USER_UPDATED' | 'USER_DELETED' | 'PASSWORD_RECOVERY' | 'TOKEN_REFRESHED' | 'SIGNED_UP', session) => {
+      (event: AuthChangeEvent, session: Session | null) => {
         if (event === 'SIGNED_UP') {
           toast.success('Conta criada com sucesso!');
         }
