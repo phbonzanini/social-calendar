@@ -5,21 +5,21 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
-import { Session } from "@supabase/supabase-js";
+import { User } from "@supabase/supabase-js";
 
 const Login = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session: Session | null) => {
+      async (event, session) => {
         if (event === 'SIGNED_UP') {
           toast.success('Conta criada com sucesso!');
         }
         if (event === 'SIGNED_IN') {
           toast.success('Login realizado com sucesso!');
         }
-        if (session) {
+        if (session?.user) {
           navigate("/");
         }
       }
