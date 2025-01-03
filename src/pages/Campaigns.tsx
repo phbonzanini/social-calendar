@@ -52,7 +52,7 @@ const Campaigns = () => {
             data_fim: date.date,
             descricao: date.description,
             data_comemorativa: date.title,
-            id_user: session?.session?.user?.id || null
+            id_user: session?.session?.user?.id ? Number(session.session.user.id) : null
           }));
 
           const { error } = await supabase
@@ -92,7 +92,7 @@ const Campaigns = () => {
         objetivo: values.objetivo || null,
         descricao: values.descricao || null,
         data_comemorativa: values.data_comemorativa || null,
-        id_user: session?.session?.user?.id || null
+        id_user: session?.session?.user?.id ? Number(session.session.user.id) : null
       };
 
       const { error } = await supabase
