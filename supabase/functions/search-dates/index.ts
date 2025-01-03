@@ -34,26 +34,29 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Construir a query usando filter com os nomes corretos das colunas
+    // Build the OR conditions for each niche
+    const orConditions = niches.map(niche => `
+      "nicho 1" = '${niche}' OR 
+      "nicho 2" = '${niche}' OR 
+      "nicho 3" = '${niche}'
+    `).join(' OR ');
+
+    const query = `
+      SELECT * FROM datas_2025 
+      WHERE ${orConditions}
+    `;
+
+    console.log("Query SQL a ser executada:", query);
+
+    // Execute the query using raw SQL
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(
-        niches.map(niche => 
-          `"nicho 1".eq.'${niche}',` +
-          `"nicho 2".eq.'${niche}',` +
-          `"nicho 3".eq.'${niche}'`
-        ).join(',')
-      );
-
-    console.log("Query SQL gerada:", supabase.from('datas_2025').select('*')
-      .or(
-        niches.map(niche => 
-          `"nicho 1".eq.'${niche}',` +
-          `"nicho 2".eq.'${niche}',` +
-          `"nicho 3".eq.'${niche}'`
-        ).join(',')
-      ).toSQL());
+      .or(niches.map(niche => [
+        { "nicho 1": niche },
+        { "nicho 2": niche },
+        { "nicho 3": niche }
+      ]).flat());
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
@@ -70,7 +73,7 @@ serve(async (req) => {
 
     console.log("Datas encontradas:", relevantDates);
 
-    // Formatar as datas encontradas
+    // Format the dates found
     const formattedDates = relevantDates.map(date => ({
       date: date.data,
       title: date.descrição,
@@ -78,7 +81,7 @@ serve(async (req) => {
       description: date.descrição
     }));
 
-    // Usar o GPT-4o-mini para gerar sugestões
+    // Use GPT-4o-mini for suggestions
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const prompt = `
       Com base nestas datas comemorativas e feriados para os nichos ${niches.join(', ')},
