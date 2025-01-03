@@ -81,8 +81,6 @@ const Login = () => {
                   button_label: 'Cadastrar',
                   loading_button_label: 'Cadastrando...',
                   email_input_placeholder: 'Seu endereço de email',
-                  minimum_password_length: 'A senha deve ter pelo menos 6 caracteres',
-                  password_too_weak: 'A senha é muito fraca. Use pelo menos 6 caracteres.',
                 },
               },
             }}
