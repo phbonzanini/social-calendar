@@ -19,6 +19,8 @@ serve(async (req) => {
       throw new Error('Niches array is required');
     }
 
+    console.log('Processing request for niches:', niches);
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -30,14 +32,10 @@ serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('Fetching relevant dates...');
-
-    // Only fetch dates for the selected niches to reduce data
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
-      .or(`nicho1.eq.${niches.join(',')},nicho2.eq.${niches.join(',')},nicho3.eq.${niches.join(',')}`)
-      .order('data');
+      .or(`nicho1.eq.${niches.join(',')},nicho2.eq.${niches.join(',')},nicho3.eq.${niches.join(',')}`);
 
     if (dbError) {
       console.error('Database error:', dbError);
@@ -54,30 +52,12 @@ serve(async (req) => {
 
     console.log(`Found ${relevantDates.length} dates`);
 
-    // Simplified data structure
-    const formattedDates = relevantDates.map(date => ({
-      d: date.data,
-      t: date.descrição,
-      c: date.tipo || 'commemorative'
-    }));
-
     const prompt = `
-    Return only relevant dates for these niches: ${niches.join(', ')}
-
-    Rules:
-    1. Include holidays (type='holiday')
-    2. Include optional days (type='optional')
-    3. Include universal dates (Mother's Day, Father's Day, Christmas, New Year, Black Friday)
-    4. Include dates directly related to the niches
-    5. Exclude indirect connections
-    6. Exclude duplicates
-
-    Dates: ${JSON.stringify(formattedDates)}
-
-    Return JSON: {"dates":[{"date":"YYYY-MM-DD","title":"Title","category":"Type","description":"Description"}]}
+    Select relevant dates for these niches: ${niches.join(', ')}
+    Include holidays, commemorative dates, and optional days that are relevant.
+    Return JSON format: {"dates":[{"date":"YYYY-MM-DD","title":"Title","category":"Type","description":"Description"}]}
+    Dates: ${JSON.stringify(relevantDates.slice(0, 20))}
     `;
-
-    console.log('Sending prompt to GPT...');
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
@@ -92,11 +72,11 @@ serve(async (req) => {
         }
       ],
       temperature: 0.3,
-      max_tokens: 1000,
+      max_tokens: 500,
     });
 
     const response = completion.choices[0].message.content;
-    console.log('Received response from GPT');
+    console.log('GPT response received');
 
     try {
       const parsedDates = JSON.parse(response);
@@ -112,7 +92,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message, details: error.toString() }),
+      JSON.stringify({ error: error.message }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
