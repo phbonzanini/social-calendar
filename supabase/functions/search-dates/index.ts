@@ -6,6 +6,7 @@ import { OpenAI } from "https://esm.sh/openai@4.20.1"
 console.log("Hello from Search Dates!")
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -31,10 +32,12 @@ serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Build the OR conditions for each niche
+    // Build the OR conditions for each niche with proper column names
     const nicheConditions = niches.map(niche => 
       `("nicho 1" = '${niche}' OR "nicho 2" = '${niche}' OR "nicho 3" = '${niche}')`
     ).join(' OR ');
+
+    console.log("SQL conditions:", nicheConditions);
 
     // Fetch relevant dates based on niches
     const { data: relevantDates, error: dbError } = await supabase
