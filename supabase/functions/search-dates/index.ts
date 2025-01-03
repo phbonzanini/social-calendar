@@ -8,19 +8,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const universalDates = [
-  "Dia do Cliente",
-  "Dia das Mães",
-  "Dia dos Pais",
-  "Natal",
-  "Ano Novo",
-  "Black Friday",
-  "Cyber Monday",
-  "Dia dos Namorados",
-  "Dia das Crianças",
-];
-
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -82,7 +71,7 @@ serve(async (req) => {
     1. INCLUA AUTOMATICAMENTE todas as datas que são:
        - Feriados nacionais
        - Pontos facultativos
-       - Datas universais como: ${universalDates.join(', ')}
+       - Datas universais como: Dia do Cliente, Dia das Mães, Dia dos Pais, Natal, Ano Novo, Black Friday, Cyber Monday, Dia dos Namorados, Dia das Crianças
        
     2. Para as demais datas, inclua as que têm conexão DIRETA e COMERCIAL com os nichos: ${niches.join(', ')}.
 
@@ -113,7 +102,7 @@ serve(async (req) => {
     console.log('Enviando prompt para o GPT...');
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
