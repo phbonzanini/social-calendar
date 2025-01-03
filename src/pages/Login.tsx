@@ -13,10 +13,10 @@ const Login = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        if (event === 'SIGNED_UP') {
+        if (event === "SIGNED_UP" as AuthChangeEvent) {
           toast.success('Conta criada com sucesso!');
         }
-        if (event === 'SIGNED_IN') {
+        if (event === "SIGNED_IN" as AuthChangeEvent) {
           toast.success('Login realizado com sucesso!');
         }
         if (session?.user) {
