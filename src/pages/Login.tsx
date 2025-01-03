@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
+import { toast } from "sonner";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,6 +12,12 @@ const Login = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (event === 'SIGNED_UP') {
+          toast.success('Conta criada com sucesso!');
+        }
+        if (event === 'SIGNED_IN') {
+          toast.success('Login realizado com sucesso!');
+        }
         if (session) {
           navigate("/");
         }
@@ -42,6 +49,18 @@ const Login = () => {
                   },
                 },
               },
+              style: {
+                input: {
+                  borderRadius: '0.375rem',
+                },
+                message: {
+                  borderRadius: '0.375rem',
+                  backgroundColor: '#fee2e2',
+                  color: '#991b1b',
+                  padding: '0.75rem',
+                  marginBottom: '1rem',
+                },
+              },
             }}
             providers={[]}
             localization={{
@@ -49,12 +68,18 @@ const Login = () => {
                 sign_in: {
                   email_label: 'Email',
                   password_label: 'Senha',
+                  password_input_placeholder: 'Mínimo de 6 caracteres',
                   button_label: 'Entrar',
+                  loading_button_label: 'Entrando...',
                 },
                 sign_up: {
                   email_label: 'Email',
                   password_label: 'Senha',
+                  password_input_placeholder: 'Mínimo de 6 caracteres',
                   button_label: 'Cadastrar',
+                  loading_button_label: 'Cadastrando...',
+                  password_error: 'A senha deve ter no mínimo 6 caracteres',
+                  email_error: 'Email inválido',
                 },
               },
             }}
