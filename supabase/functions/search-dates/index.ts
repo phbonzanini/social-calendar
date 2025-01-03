@@ -23,7 +23,7 @@ serve(async (req) => {
       throw new Error('Niches array is required');
     }
 
-    console.log("Received niches:", niches);
+    console.log("Buscando datas para os nichos:", niches);
 
     // Get environment variables
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
@@ -34,21 +34,24 @@ serve(async (req) => {
       throw new Error('Missing environment variables');
     }
 
-    const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch relevant dates based on niches using the correct column names with spaces
+    // Construir a query para buscar datas relevantes
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
-      .select('data, descrição, tipo')
-      .or(`"nicho 1".in.(${niches.map(n => `'${n}'`).join(',')}),"nicho 2".in.(${niches.map(n => `'${n}'`).join(',')}),"nicho 3".in.(${niches.map(n => `'${n}'`).join(',')})`)
+      .select('*')
+      .or(niches.map(niche => [
+        `"nicho 1".eq.${niche}`,
+        `"nicho 2".eq.${niche}`,
+        `"nicho 3".eq.${niche}`
+      ]).flat().join(','));
 
     if (dbError) {
-      console.error('Database error:', dbError);
+      console.error('Erro no banco de dados:', dbError);
       throw new Error(`Database error: ${dbError.message}`);
     }
 
-    console.log("Found dates:", relevantDates);
+    console.log("Datas encontradas:", relevantDates);
 
     if (!relevantDates || relevantDates.length === 0) {
       return new Response(
@@ -57,11 +60,21 @@ serve(async (req) => {
       );
     }
 
+    // Formatar as datas encontradas
+    const formattedDates = relevantDates.map(date => ({
+      date: date.data,
+      title: date.descrição,
+      category: date.tipo?.toLowerCase() || 'commemorative',
+      description: date.descrição
+    }));
+
+    // Usar o GPT-4-mini para gerar sugestões
+    const openai = new OpenAI({ apiKey: openaiApiKey });
     const prompt = `
-      Given these commemorative dates and holidays for the niches ${niches.join(', ')},
-      return only the most relevant ones that could be used for marketing campaigns.
-      For each date, provide a short description of why it's relevant and how it could be used.
-      Dates: ${JSON.stringify(relevantDates)}
+      Com base nestas datas comemorativas e feriados para os nichos ${niches.join(', ')},
+      retorne apenas as mais relevantes que poderiam ser usadas para campanhas de marketing.
+      Para cada data, forneça uma breve descrição do motivo pelo qual é relevante e como poderia ser usada.
+      Datas: ${JSON.stringify(formattedDates)}
     `;
 
     const completion = await openai.chat.completions.create({
@@ -69,7 +82,7 @@ serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: "You are a marketing specialist helping to identify the most relevant dates for marketing campaigns."
+          content: "Você é um especialista em marketing ajudando a identificar as datas mais relevantes para campanhas de marketing."
         },
         {
           role: "user",
@@ -80,13 +93,6 @@ serve(async (req) => {
       max_tokens: 1000
     });
 
-    const formattedDates = relevantDates.map(date => ({
-      date: date.data,
-      title: date.descrição,
-      category: date.tipo.toLowerCase(),
-      description: date.descrição
-    }));
-
     return new Response(
       JSON.stringify({ 
         dates: formattedDates,
@@ -96,7 +102,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Erro:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 
