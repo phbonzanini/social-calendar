@@ -32,11 +32,11 @@ serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch relevant dates based on niches using in operator
+    // Fetch relevant dates based on niches using the correct column names with spaces
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
-      .or(`nicho_1.in.(${niches.map(n => `'${n}'`).join(',')}),nicho_2.in.(${niches.map(n => `'${n}'`).join(',')}),nicho_3.in.(${niches.map(n => `'${n}'`).join(',')})`)
+      .or(`"nicho 1".in.(${niches.map(n => `'${n}'`).join(',')}),"nicho 2".in.(${niches.map(n => `'${n}'`).join(',')}),"nicho 3".in.(${niches.map(n => `'${n}'`).join(',')})`)
 
     if (dbError) {
       console.error('Database error:', dbError);
