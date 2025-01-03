@@ -36,24 +36,13 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Construir a query para buscar datas que correspondam a qualquer um dos nichos
-    let query = supabase.from('datas_2025').select('*');
-
-    // Para cada nicho, adicionar condições OR para as três colunas
-    const conditions = niches.flatMap(niche => [
-      { column: 'nicho 1', value: niche },
-      { column: 'nicho 2', value: niche },
-      { column: 'nicho 3', value: niche }
-    ]);
-
-    // Aplicar as condições usando or
-    if (conditions.length > 0) {
-      query = query.or(
-        conditions.map(({ column, value }) => `${column}.eq.${value}`).join(',')
-      );
-    }
-
-    const { data: relevantDates, error: dbError } = await query;
+    // Construir a query usando filter
+    const { data: relevantDates, error: dbError } = await supabase
+      .from('datas_2025')
+      .select('*')
+      .or(niches.map(niche => 
+        `or("nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche})`
+      ).join(','));
 
     console.log("Query executada, resultado:", relevantDates);
 
