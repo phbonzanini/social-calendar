@@ -1,44 +1,42 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
-import OpenAI from 'https://esm.sh/openai@4.28.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
+import { corsHeaders } from '../_shared/cors.ts'
+import { OpenAI } from "https://esm.sh/openai@4.20.1"
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+console.log("Hello from Search Dates!")
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { niches } = await req.json();
+    const { niches } = await req.json()
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
-      throw new Error('Niches array is required');
+      throw new Error('Niches array is required')
     }
 
-    console.log('Processing request for niches:', niches);
+    console.log("Received niches:", niches)
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
+    // Get environment variables
+    const openaiApiKey = Deno.env.get('OPENAI_API_KEY')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    if (!supabaseUrl || !supabaseKey || !openaiApiKey) {
-      throw new Error('Missing environment variables');
+    if (!openaiApiKey || !supabaseUrl || !supabaseKey) {
+      throw new Error('Missing environment variables')
     }
 
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Build the OR conditions for each niche column
-    const nicheConditions = niches.map(niche => `"nicho 1".eq.${niche},` + 
-                                                `"nicho 2".eq.${niche},` + 
-                                                `"nicho 3".eq.${niche}`).join(',');
+    // Build the OR conditions for each niche
+    const nicheConditions = niches.map(niche => 
+      `("nicho 1" = '${niche}' OR "nicho 2" = '${niche}' OR "nicho 3" = '${niche}')`
+    ).join(' OR ');
 
-    // Fetch only relevant dates based on niches
+    // Fetch relevant dates based on niches
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
@@ -46,26 +44,23 @@ serve(async (req) => {
 
     if (dbError) {
       console.error('Database error:', dbError);
-      throw dbError;
+      throw new Error(`Database error: ${dbError.message}`);
     }
 
+    console.log("Found dates:", relevantDates);
+
     if (!relevantDates || relevantDates.length === 0) {
-      console.log('No dates found');
       return new Response(
         JSON.stringify({ dates: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${relevantDates.length} dates`);
-
-    // Limit the number of dates to reduce token usage
-    const limitedDates = relevantDates.slice(0, 10);
-
     const prompt = `
-    Select relevant dates for these niches: ${niches.join(', ')}
-    Return JSON format: {"dates":[{"date":"YYYY-MM-DD","title":"Title","category":"Type","description":"Description"}]}
-    Dates: ${JSON.stringify(limitedDates)}
+      Given these commemorative dates and holidays for the niches ${niches.join(', ')},
+      return only the most relevant ones that could be used for marketing campaigns.
+      For each date, provide a short description of why it's relevant and how it could be used.
+      Dates: ${JSON.stringify(relevantDates)}
     `;
 
     const completion = await openai.chat.completions.create({
@@ -73,30 +68,31 @@ serve(async (req) => {
       messages: [
         {
           role: "system",
-          content: "You are a helpful assistant that filters and returns relevant dates in JSON format."
+          content: "You are a marketing specialist helping to identify the most relevant dates for marketing campaigns."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: 0.3,
-      max_tokens: 500,
+      temperature: 0.7,
+      max_tokens: 1000
     });
 
-    const response = completion.choices[0].message.content;
-    console.log('GPT response received');
+    const formattedDates = relevantDates.map(date => ({
+      date: date.data,
+      title: date.descrição,
+      category: date.tipo.toLowerCase(),
+      description: date.descrição
+    }));
 
-    try {
-      const parsedDates = JSON.parse(response);
-      return new Response(
-        JSON.stringify(parsedDates),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } catch (error) {
-      console.error('Error parsing GPT response:', error);
-      throw new Error('Invalid response format from GPT');
-    }
+    return new Response(
+      JSON.stringify({ 
+        dates: formattedDates,
+        aiSuggestions: completion.choices[0].message.content 
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
   } catch (error) {
     console.error('Error:', error);
@@ -106,6 +102,6 @@ serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
-    );
+    )
   }
-});
+})
