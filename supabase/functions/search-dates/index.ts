@@ -1,9 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import { OpenAI } from "https://esm.sh/openai@4.20.1";
-
-console.log("Hello from Search Dates!")
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,68 +14,123 @@ serve(async (req) => {
 
   try {
     const { niches } = await req.json();
+    console.log("Buscando datas para os nichos:", niches);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Niches array is required');
     }
 
-    console.log("Buscando datas para os nichos:", niches);
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseKey || !openAIApiKey) {
       throw new Error('Missing environment variables');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Build the query with proper column names
-    let query = supabase
+    // Fetch all dates from the database
+    const { data: allDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
-
-    // Create conditions for each niche
-    const conditions = niches.map(niche => {
-      return `or("nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche})`
-    }).join(',');
-
-    // Execute the query with proper filters
-    const { data: relevantDates, error: dbError } = await query
-      .or(conditions);
-
-    console.log("Query conditions:", conditions);
 
     if (dbError) {
       console.error('Database error:', dbError);
       throw new Error(`Database error: ${dbError.message}`);
     }
 
-    if (!relevantDates || relevantDates.length === 0) {
-      console.log("No dates found for niches:", niches);
+    if (!allDates || allDates.length === 0) {
+      console.log("No dates found in database");
       return new Response(
         JSON.stringify({ 
           dates: [],
-          message: "Nenhuma data encontrada para os nichos selecionados"
+          message: "Nenhuma data encontrada no banco de dados"
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log("Found dates:", relevantDates);
-
-    // Format dates for response
-    const formattedDates = relevantDates.map(date => ({
+    // Format dates for GPT analysis
+    const datesForAnalysis = allDates.map(date => ({
       date: date.data,
-      title: date.descrição,
-      category: date.tipo?.toLowerCase() || 'commemorative',
-      description: date.descrição
+      description: date.descrição,
+      type: date.tipo
     }));
 
-    return new Response(
-      JSON.stringify({ dates: formattedDates }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    // Prepare prompt for GPT
+    const prompt = `
+    Analise as seguintes datas comemorativas e determine quais são relevantes para os nichos: ${niches.join(', ')}.
+    
+    Datas para análise:
+    ${JSON.stringify(datesForAnalysis, null, 2)}
+
+    Para cada data, avalie:
+    1. Se ela tem relevância direta ou indireta para os nichos mencionados
+    2. Como essa data pode ser aproveitada para marketing no nicho
+    3. Se a data não tiver nenhuma relevância, exclua-a da lista
+
+    Retorne apenas as datas relevantes no formato JSON, mantendo a mesma estrutura de dados.
+    `;
+
+    // Call GPT API
+    const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'Você é um especialista em marketing que ajuda a identificar datas comemorativas relevantes para diferentes nichos de negócio.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!gptResponse.ok) {
+      throw new Error(`OpenAI API error: ${gptResponse.status}`);
+    }
+
+    const gptData = await gptResponse.json();
+    console.log("GPT Response:", gptData);
+
+    let relevantDates;
+    try {
+      // Parse GPT response and extract relevant dates
+      const gptContent = gptData.choices[0].message.content;
+      relevantDates = JSON.parse(gptContent);
+      
+      // Map back to original date format
+      const formattedDates = relevantDates.map(date => {
+        const originalDate = allDates.find(d => d.data === date.date);
+        return {
+          date: date.date,
+          title: originalDate.descrição,
+          category: originalDate.tipo?.toLowerCase() || 'commemorative',
+          description: date.description || originalDate.descrição
+        };
+      });
+
+      console.log("Datas relevantes encontradas:", formattedDates);
+
+      return new Response(
+        JSON.stringify({ dates: formattedDates }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } catch (error) {
+      console.error('Error processing GPT response:', error);
+      throw new Error('Failed to process AI response');
+    }
 
   } catch (error) {
     console.error('Error:', error);
