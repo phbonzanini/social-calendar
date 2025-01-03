@@ -11,7 +11,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -25,7 +24,6 @@ serve(async (req) => {
 
     console.log("Buscando datas para os nichos:", niches);
 
-    // Get environment variables
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -36,15 +34,26 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Construir a query usando filter
+    // Construir a query usando filter com os nomes corretos das colunas
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(niches.map(niche => 
-        `or("nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche})`
-      ).join(','));
+      .or(
+        niches.map(niche => 
+          `"nicho 1".eq.'${niche}',` +
+          `"nicho 2".eq.'${niche}',` +
+          `"nicho 3".eq.'${niche}'`
+        ).join(',')
+      );
 
-    console.log("Query executada, resultado:", relevantDates);
+    console.log("Query SQL gerada:", supabase.from('datas_2025').select('*')
+      .or(
+        niches.map(niche => 
+          `"nicho 1".eq.'${niche}',` +
+          `"nicho 2".eq.'${niche}',` +
+          `"nicho 3".eq.'${niche}'`
+        ).join(',')
+      ).toSQL());
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
@@ -58,6 +67,8 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log("Datas encontradas:", relevantDates);
 
     // Formatar as datas encontradas
     const formattedDates = relevantDates.map(date => ({
