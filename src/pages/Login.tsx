@@ -19,10 +19,11 @@ const Login = () => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: Session | null) => {
+      (event: string, session: Session | null) => {
         switch (event) {
           case 'SIGNED_UP':
             toast.success('Conta criada com sucesso!');
+            navigate("/");
             break;
           case 'SIGNED_IN':
             toast.success('Login realizado com sucesso!');
@@ -31,10 +32,6 @@ const Login = () => {
           case 'SIGNED_OUT':
             toast.info('Você foi desconectado');
             break;
-        }
-        
-        if (session?.user) {
-          navigate("/");
         }
       }
     );
