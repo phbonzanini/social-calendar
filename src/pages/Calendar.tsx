@@ -128,9 +128,6 @@ const Calendar = () => {
             <p className="text-red-600 text-center">
               Erro ao carregar datas: {error instanceof Error ? error.message : 'Erro desconhecido'}
             </p>
-            <pre className="text-xs bg-white p-4 rounded overflow-auto max-w-full">
-              {JSON.stringify(error, null, 2)}
-            </pre>
           </div>
         ) : !isLoading && (!dates || dates.length === 0) ? (
           <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 p-6 bg-amber-50 rounded-lg">

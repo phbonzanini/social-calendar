@@ -24,76 +24,50 @@ serve(async (req) => {
 
     console.log("Buscando datas para os nichos:", niches);
 
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!openaiApiKey || !supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseKey) {
       throw new Error('Missing environment variables');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Primeiro, vamos verificar se há dados na tabela
-    const { data: sampleData, error: sampleError } = await supabase
-      .from('datas_2025')
-      .select('*')
-      .limit(5);
-
-    console.log("Amostra de dados na tabela:", sampleData);
-    
-    if (sampleError) {
-      console.error("Erro ao verificar dados:", sampleError);
-      throw new Error(`Database sample error: ${sampleError.message}`);
-    }
-
-    // Construir a query usando filter para cada coluna de nicho
+    // Build the query with proper column names
     let query = supabase
       .from('datas_2025')
       .select('*');
 
-    // Adicionar condições OR para cada nicho em cada coluna
-    const conditions = [];
-    for (const niche of niches) {
-      conditions.push(
-        `nicho 1.eq.'${niche}'`,
-        `nicho 2.eq.'${niche}'`,
-        `nicho 3.eq.'${niche}'`
-      );
-    }
+    // Create conditions for each niche
+    const conditions = niches.map(niche => {
+      return `or("nicho 1".eq.${niche},"nicho 2".eq.${niche},"nicho 3".eq.${niche})`
+    }).join(',');
 
-    // Combinar todas as condições com OR
-    query = query.or(conditions.join(','));
+    // Execute the query with proper filters
+    const { data: relevantDates, error: dbError } = await query
+      .or(conditions);
 
-    // Executar a query
-    const { data: relevantDates, error: dbError } = await query;
-
-    console.log("Query executada:", query);
-    console.log("Resultados encontrados:", relevantDates?.length || 0);
+    console.log("Query conditions:", conditions);
 
     if (dbError) {
-      console.error('Erro no banco de dados:', dbError);
-      throw new Error(`Database error: "${dbError.message}"`);
+      console.error('Database error:', dbError);
+      throw new Error(`Database error: ${dbError.message}`);
     }
 
     if (!relevantDates || relevantDates.length === 0) {
-      console.log("Nenhuma data encontrada para os nichos:", niches);
+      console.log("No dates found for niches:", niches);
       return new Response(
         JSON.stringify({ 
           dates: [],
-          message: "Nenhuma data encontrada para os nichos selecionados",
-          debug: { 
-            sampleData,
-            searchedNiches: niches
-          }
+          message: "Nenhuma data encontrada para os nichos selecionados"
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log("Datas encontradas:", relevantDates);
+    console.log("Found dates:", relevantDates);
 
-    // Format the dates found
+    // Format dates for response
     const formattedDates = relevantDates.map(date => ({
       date: date.data,
       title: date.descrição,
@@ -101,44 +75,16 @@ serve(async (req) => {
       description: date.descrição
     }));
 
-    // Use GPT-4-mini for suggestions
-    const openai = new OpenAI({ apiKey: openaiApiKey });
-    const prompt = `
-      Com base nestas datas comemorativas e feriados para os nichos ${niches.join(', ')},
-      retorne apenas as mais relevantes que poderiam ser usadas para campanhas de marketing.
-      Para cada data, forneça uma breve descrição do motivo pelo qual é relevante e como poderia ser usada.
-      Datas: ${JSON.stringify(formattedDates)}
-    `;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4-mini",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um especialista em marketing ajudando a identificar as datas mais relevantes para campanhas de marketing."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 1000
-    });
-
     return new Response(
-      JSON.stringify({ 
-        dates: formattedDates,
-        aiSuggestions: completion.choices[0].message.content 
-      }),
+      JSON.stringify({ dates: formattedDates }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Erro:', error);
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: error instanceof Error ? error.message : 'Unknown error',
         details: "Erro ao processar a requisição"
       }),
       { 
