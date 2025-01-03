@@ -34,29 +34,21 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Build the OR conditions for each niche
-    const orConditions = niches.map(niche => `
-      "nicho 1" = '${niche}' OR 
-      "nicho 2" = '${niche}' OR 
-      "nicho 3" = '${niche}'
-    `).join(' OR ');
+    // Construct the filter conditions for each niche
+    const filterConditions = niches.map(niche => ({
+      or: [
+        { "nicho 1": { equals: niche } },
+        { "nicho 2": { equals: niche } },
+        { "nicho 3": { equals: niche } }
+      ]
+    }));
 
-    const query = `
-      SELECT * FROM datas_2025 
-      WHERE ${orConditions}
-    `;
+    console.log("Filter conditions:", JSON.stringify(filterConditions, null, 2));
 
-    console.log("Query SQL a ser executada:", query);
-
-    // Execute the query using raw SQL
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .or(niches.map(niche => [
-        { "nicho 1": niche },
-        { "nicho 2": niche },
-        { "nicho 3": niche }
-      ]).flat());
+      .or(`nicho 1.eq.${niches[0]},nicho 2.eq.${niches[0]},nicho 3.eq.${niches[0]}`);
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
