@@ -1,5 +1,6 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import OpenAI from 'https://esm.sh/openai@4.28.0';
 
 const corsHeaders = {
@@ -9,7 +10,7 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -32,6 +33,7 @@ serve(async (req) => {
     const openai = new OpenAI({ apiKey: openaiApiKey });
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fetch only relevant dates based on niches
     const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('data, descrição, tipo')
@@ -52,15 +54,17 @@ serve(async (req) => {
 
     console.log(`Found ${relevantDates.length} dates`);
 
+    // Limit the number of dates to reduce token usage
+    const limitedDates = relevantDates.slice(0, 10);
+
     const prompt = `
     Select relevant dates for these niches: ${niches.join(', ')}
-    Include holidays, commemorative dates, and optional days that are relevant.
     Return JSON format: {"dates":[{"date":"YYYY-MM-DD","title":"Title","category":"Type","description":"Description"}]}
-    Dates: ${JSON.stringify(relevantDates.slice(0, 20))}
+    Dates: ${JSON.stringify(limitedDates)}
     `;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
