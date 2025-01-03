@@ -34,38 +34,14 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Simplified query approach
-    let { data: relevantDates, error: dbError } = await supabase
+    // Query using OR conditions for all three niche columns
+    const { data: relevantDates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*')
-      .filter('nicho 1', 'in', `(${niches.map(n => `'${n}'`).join(',')})`)
+      .or(niches.map(niche => `or(nicho 1.eq.${niche},nicho 2.eq.${niche},nicho 3.eq.${niche})`).join(','))
       .order('data');
 
-    // If no results found with nicho 1, try nicho 2
-    if (!relevantDates?.length) {
-      console.log("Tentando buscar por nicho 2...");
-      const { data: dates2, error: error2 } = await supabase
-        .from('datas_2025')
-        .select('*')
-        .filter('nicho 2', 'in', `(${niches.map(n => `'${n}'`).join(',')})`)
-        .order('data');
-      
-      if (dates2?.length) {
-        relevantDates = dates2;
-      } else {
-        // If still no results, try nicho 3
-        console.log("Tentando buscar por nicho 3...");
-        const { data: dates3, error: error3 } = await supabase
-          .from('datas_2025')
-          .select('*')
-          .filter('nicho 3', 'in', `(${niches.map(n => `'${n}'`).join(',')})`)
-          .order('data');
-        
-        if (dates3?.length) {
-          relevantDates = dates3;
-        }
-      }
-    }
+    console.log("Query result:", { relevantDates, dbError });
 
     if (dbError) {
       console.error('Erro no banco de dados:', dbError);
@@ -74,10 +50,18 @@ serve(async (req) => {
 
     if (!relevantDates || relevantDates.length === 0) {
       console.log("Nenhuma data encontrada");
+      // Let's check what's in the database
+      const { data: allDates } = await supabase
+        .from('datas_2025')
+        .select('*')
+        .limit(5);
+      console.log("Amostra de datas no banco:", allDates);
+      
       return new Response(
         JSON.stringify({ 
           dates: [],
-          message: "Nenhuma data encontrada para os nichos selecionados" 
+          message: "Nenhuma data encontrada para os nichos selecionados",
+          debug: { sampleDates: allDates }
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
