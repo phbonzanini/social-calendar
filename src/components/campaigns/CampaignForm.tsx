@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -20,9 +21,11 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface CampaignFormProps {
   onSubmit: (values: FormValues) => Promise<void>;
+  initialData?: FormValues;
+  isEditing?: boolean;
 }
 
-export const CampaignForm = ({ onSubmit }: CampaignFormProps) => {
+export const CampaignForm = ({ onSubmit, initialData, isEditing = false }: CampaignFormProps) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -35,10 +38,16 @@ export const CampaignForm = ({ onSubmit }: CampaignFormProps) => {
     },
   });
 
+  useEffect(() => {
+    if (initialData) {
+      form.reset(initialData);
+    }
+  }, [initialData, form]);
+
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Criar Nova Campanha</DialogTitle>
+        <DialogTitle>{isEditing ? "Editar Campanha" : "Criar Nova Campanha"}</DialogTitle>
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -103,7 +112,7 @@ export const CampaignForm = ({ onSubmit }: CampaignFormProps) => {
             )}
           />
           <Button type="submit" className="w-full">
-            Criar Campanha
+            {isEditing ? "Salvar Alterações" : "Criar Campanha"}
           </Button>
         </form>
       </Form>
