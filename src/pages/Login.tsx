@@ -53,7 +53,6 @@ const Login = () => {
           <Auth
             supabaseClient={supabase}
             view={view}
-            onViewChange={newView => setView(newView as "sign_in" | "sign_up")}
             appearance={{
               theme: ThemeSupa,
               variables: {
@@ -97,12 +96,11 @@ const Login = () => {
                   loading_button_label: 'Criando conta...',
                   email_input_placeholder: 'Seu endereço de email',
                   link_text: 'Já tem uma conta? Entre',
-                },
-                forgotten_password: {
-                  email_label: 'Email',
-                  button_label: 'Enviar instruções',
-                  loading_button_label: 'Enviando instruções...',
-                  link_text: 'Esqueceu sua senha?',
+                  confirmation_text: 'Confirme sua senha',
+                  phone_label: 'Telefone',
+                  phone_input_placeholder: 'Seu número de telefone',
+                  name_label: 'Nome completo',
+                  name_input_placeholder: 'Seu nome completo',
                 },
               },
             }}
