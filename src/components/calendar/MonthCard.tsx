@@ -6,6 +6,8 @@ import { CampaignForm } from "@/components/campaigns/CampaignForm";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Campaign {
   id: number;
@@ -86,43 +88,85 @@ export const MonthCard = ({ month, monthIndex, campaigns }: MonthCardProps) => {
     }
   };
 
+  const handleDeleteCampaign = async (campaignId: number) => {
+    try {
+      const { error } = await supabase
+        .from("campanhas_marketing")
+        .delete()
+        .eq("id", campaignId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Campanha excluída",
+        description: "A campanha foi excluída com sucesso!",
+      });
+
+      // Reload the page to show updated data
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao excluir campanha:", error);
+      toast({
+        title: "Erro ao excluir campanha",
+        description: "Não foi possível excluir a campanha. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card className="glass-card hover:shadow-lg transition-shadow duration-200">
       <CardContent className="p-4">
         <h3 className="font-semibold text-lg mb-3 text-neutral-dark">{month}</h3>
         <div className="space-y-2">
           {monthCampaigns.map(campaign => (
-            <Dialog key={campaign.id} open={isEditing && selectedCampaign?.id === campaign.id} onOpenChange={(open) => {
-              if (!open) {
-                setIsEditing(false);
-                setSelectedCampaign(null);
-              }
-            }}>
-              <DialogTrigger asChild>
-                <div
-                  className="text-sm p-2 bg-primary/10 rounded-md hover:bg-primary/20 transition-colors cursor-pointer"
-                  onClick={() => handleEditClick(campaign)}
-                >
-                  <p className="font-medium">{campaign.nome}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(campaign.data_inicio), "dd/MM", { locale: ptBR })} - {format(new Date(campaign.data_fim), "dd/MM", { locale: ptBR })}
-                  </p>
-                  {campaign.descricao && (
-                    <p className="text-xs mt-1 text-muted-foreground">{campaign.descricao}</p>
-                  )}
-                </div>
-              </DialogTrigger>
-              {isEditing && selectedCampaign?.id === campaign.id && (
-                <CampaignForm
-                  onSubmit={handleEditSubmit}
-                  initialData={campaign}
-                  isEditing={true}
-                />
-              )}
-            </Dialog>
+            <div key={campaign.id} className="relative">
+              <div
+                className="text-sm p-2 bg-primary/10 rounded-md hover:bg-primary/20 transition-colors cursor-pointer"
+                onClick={() => handleEditClick(campaign)}
+              >
+                <p className="font-medium">{campaign.nome}</p>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(campaign.data_inicio), "dd/MM", { locale: ptBR })} - {format(new Date(campaign.data_fim), "dd/MM", { locale: ptBR })}
+                </p>
+                {campaign.descricao && (
+                  <p className="text-xs mt-1 text-muted-foreground">{campaign.descricao}</p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-1 right-1 h-6 w-6"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteCampaign(campaign.id);
+                }}
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </div>
           ))}
         </div>
       </CardContent>
+
+      {/* Separate Dialog for editing */}
+      <Dialog 
+        open={isEditing} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsEditing(false);
+            setSelectedCampaign(null);
+          }
+        }}
+      >
+        {selectedCampaign && (
+          <CampaignForm
+            onSubmit={handleEditSubmit}
+            initialData={selectedCampaign}
+            isEditing={true}
+          />
+        )}
+      </Dialog>
     </Card>
   );
 };
