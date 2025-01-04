@@ -22,8 +22,7 @@ const Login = () => {
       async (event: string, session: Session | null) => {
         switch (event) {
           case 'SIGNED_UP':
-            toast.success('Conta criada com sucesso!');
-            navigate("/select-niche");
+            toast.success('Conta criada com sucesso! Você já pode fazer login.');
             break;
           case 'SIGNED_IN':
             toast.success('Login realizado com sucesso!');
