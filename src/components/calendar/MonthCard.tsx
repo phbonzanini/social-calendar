@@ -72,11 +72,8 @@ export const MonthCard = ({ month, monthIndex, campaigns }: MonthCardProps) => {
         description: "A campanha foi atualizada com sucesso!",
       });
 
-      // Reset state
       setIsEditing(false);
       setSelectedCampaign(null);
-
-      // Reload the page to show updated data
       window.location.reload();
     } catch (error) {
       console.error("Erro ao atualizar campanha:", error);
@@ -102,7 +99,6 @@ export const MonthCard = ({ month, monthIndex, campaigns }: MonthCardProps) => {
         description: "A campanha foi excluída com sucesso!",
       });
 
-      // Reload the page to show updated data
       window.location.reload();
     } catch (error) {
       console.error("Erro ao excluir campanha:", error);
@@ -149,7 +145,6 @@ export const MonthCard = ({ month, monthIndex, campaigns }: MonthCardProps) => {
         </div>
       </CardContent>
 
-      {/* Separate Dialog for editing */}
       <Dialog 
         open={isEditing} 
         onOpenChange={(open) => {
@@ -162,7 +157,14 @@ export const MonthCard = ({ month, monthIndex, campaigns }: MonthCardProps) => {
         {selectedCampaign && (
           <CampaignForm
             onSubmit={handleEditSubmit}
-            initialData={selectedCampaign}
+            defaultValues={{
+              nome: selectedCampaign.nome,
+              data_inicio: selectedCampaign.data_inicio,
+              data_fim: selectedCampaign.data_fim,
+              objetivo: selectedCampaign.objetivo || "",
+              descricao: selectedCampaign.descricao || "",
+              data_comemorativa: selectedCampaign.data_comemorativa || "",
+            }}
             isEditing={true}
           />
         )}
