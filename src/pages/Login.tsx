@@ -14,23 +14,35 @@ const Login = () => {
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/");
+        navigate("/select-niche");
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event: string, session: Session | null) => {
+      async (event: string, session: Session | null) => {
         switch (event) {
           case 'SIGNED_UP':
             toast.success('Conta criada com sucesso!');
-            navigate("/");
+            navigate("/select-niche");
             break;
           case 'SIGNED_IN':
             toast.success('Login realizado com sucesso!');
-            navigate("/");
+            navigate("/select-niche");
             break;
           case 'SIGNED_OUT':
             toast.info('Você foi desconectado');
+            break;
+          case 'USER_DELETED':
+            toast.error('Conta deletada');
+            break;
+          case 'PASSWORD_RECOVERY':
+            toast.info('Email de recuperação de senha enviado');
+            break;
+          case 'TOKEN_REFRESHED':
+            console.log('Token refreshed');
+            break;
+          case 'MFA_CHALLENGE_VERIFIED':
+            console.log('MFA verified');
             break;
         }
       }
@@ -91,6 +103,13 @@ const Login = () => {
                   password_input_placeholder: 'Senha (mínimo 6 caracteres)',
                   button_label: 'Cadastrar',
                   loading_button_label: 'Cadastrando...',
+                  email_input_placeholder: 'Seu endereço de email',
+                },
+                forgotten_password: {
+                  button_label: 'Esqueci minha senha',
+                  loading_button_label: 'Enviando email...',
+                  email_label: 'Email',
+                  password_label: 'Nova senha',
                   email_input_placeholder: 'Seu endereço de email',
                 },
               },
