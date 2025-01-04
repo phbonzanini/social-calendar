@@ -56,28 +56,28 @@ serve(async (req) => {
     const datesForAnalysis = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
-      category: date.tipo
+      category: date.tipo?.toLowerCase() || 'commemorative'
     }));
 
-    const systemPrompt = `You are a marketing expert that helps identify relevant commemorative dates for different business niches. You will analyze dates and determine their relevance for specific niches. You must return ONLY a JSON array with the relevant dates.`;
+    const systemPrompt = `You are a marketing expert that helps identify relevant commemorative dates for different business niches. Analyze the provided dates and determine their relevance for specific niches. You must return ONLY a JSON array containing the relevant dates, with no additional text or explanation.
 
-    const userPrompt = `Analyze these commemorative dates and determine which ones are relevant for these niches: ${niches.join(', ')}.
+Each date in the array must follow this exact format:
+{
+  "date": "YYYY-MM-DD",
+  "title": "string",
+  "category": "commemorative" | "holiday" | "optional",
+  "description": "string"
+}`;
 
-Dates to analyze:
+    const userPrompt = `Return a JSON array of dates from this list that are relevant for these niches: ${niches.join(', ')}.
+
+Available dates:
 ${JSON.stringify(datesForAnalysis, null, 2)}
 
-Return ONLY a JSON array with the relevant dates in this exact format:
-[
-  {
-    "date": "2025-01-01",
-    "title": "New Year's Day",
-    "category": "holiday"
-  }
-]`;
+Remember to return ONLY the JSON array, no other text.`;
 
     console.log("[DEBUG] Sending request to GPT");
 
-    // Call GPT API
     const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -109,16 +109,23 @@ Return ONLY a JSON array with the relevant dates in this exact format:
     }
 
     try {
-      const gptContent = gptData.choices[0].message.content;
+      const gptContent = gptData.choices[0].message.content.trim();
       console.log("[DEBUG] Raw GPT content:", gptContent);
 
       let relevantDates;
       try {
+        // Try to parse the response directly
         relevantDates = JSON.parse(gptContent);
-      } catch (parseError) {
-        console.error('[ERROR] Failed to parse GPT content:', parseError);
-        console.error('[ERROR] GPT content was:', gptContent);
-        throw new Error('Failed to parse GPT response as JSON');
+      } catch (firstError) {
+        // If direct parsing fails, try to extract JSON array from the response
+        const jsonMatch = gptContent.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          relevantDates = JSON.parse(jsonMatch[0]);
+        } else {
+          console.error('[ERROR] Failed to parse GPT content:', firstError);
+          console.error('[ERROR] GPT content was:', gptContent);
+          throw new Error('Failed to parse GPT response as JSON');
+        }
       }
 
       if (!Array.isArray(relevantDates)) {
@@ -126,25 +133,26 @@ Return ONLY a JSON array with the relevant dates in this exact format:
         throw new Error('GPT response is not an array');
       }
 
-      // Map back to original date format
-      const formattedDates = relevantDates.map(date => {
-        const originalDate = allDates.find(d => d.data === date.date);
-        if (!originalDate) {
-          console.warn(`[WARN] Could not find original date for ${date.date}`);
+      // Map back to original date format and validate each date
+      const formattedDates = relevantDates
+        .filter(date => {
+          // Ensure the date exists in our original dataset
+          return allDates.some(d => d.data === date.date);
+        })
+        .map(date => {
+          const originalDate = allDates.find(d => d.data === date.date);
+          if (!originalDate) {
+            console.warn(`[WARN] Could not find original date for ${date.date}`);
+            return null;
+          }
           return {
             date: date.date,
-            title: date.title,
-            category: date.category || 'commemorative',
-            description: date.description || date.title
+            title: originalDate.descrição,
+            category: originalDate.tipo?.toLowerCase() || 'commemorative',
+            description: originalDate.descrição
           };
-        }
-        return {
-          date: date.date,
-          title: originalDate.descrição,
-          category: originalDate.tipo?.toLowerCase() || 'commemorative',
-          description: date.description || originalDate.descrição
-        };
-      });
+        })
+        .filter(date => date !== null);
 
       console.log(`[INFO] Returning ${formattedDates.length} relevant dates`);
 
@@ -162,8 +170,8 @@ Return ONLY a JSON array with the relevant dates in this exact format:
     console.error('[ERROR] Function error:', error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        details: error instanceof Error ? error.stack : 'No stack trace available'
+        error: 'Failed to process AI response',
+        details: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 
         status: 500,
