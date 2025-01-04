@@ -16,7 +16,7 @@ const SignIn = () => {
 
   const handleResendConfirmation = async () => {
     if (isResendingEmail) {
-      toast.error("Aguarde antes de solicitar um novo email");
+      toast.error("Aguarde 60 segundos antes de solicitar novamente");
       return;
     }
 
@@ -28,18 +28,21 @@ const SignIn = () => {
         email,
       });
       
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("rate limit")) {
+          toast.error("Aguarde alguns minutos antes de solicitar um novo email");
+        } else {
+          toast.error("Erro ao reenviar email de confirmação");
+        }
+        return;
+      }
       
       toast.success("Email de confirmação reenviado com sucesso");
-    } catch (error: any) {
-      if (error.message.includes("rate limit")) {
-        toast.error("Aguarde alguns minutos antes de solicitar um novo email");
-      } else {
-        toast.error("Erro ao reenviar email de confirmação");
-      }
     } finally {
-      // Reset after 60 seconds
-      setTimeout(() => setIsResendingEmail(false), 60000);
+      // Set a timeout to re-enable the button after 60 seconds
+      setTimeout(() => {
+        setIsResendingEmail(false);
+      }, 60000);
     }
   };
 
@@ -62,6 +65,7 @@ const SignIn = () => {
                 label: "Reenviar",
                 onClick: handleResendConfirmation,
               },
+              duration: 10000, // Show for 10 seconds to give user time to click
             }
           );
         } else if (error.message.includes("Invalid login credentials")) {
