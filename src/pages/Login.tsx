@@ -1,7 +1,7 @@
 import { Auth } from "@supabase/auth-ui-react";
 import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { Session } from "@supabase/supabase-js";
 
 const Login = () => {
   const navigate = useNavigate();
+  const [view, setView] = useState<"sign_in" | "sign_up">("sign_in");
 
   useEffect(() => {
     // Check if user is already logged in
@@ -47,10 +48,12 @@ const Login = () => {
       <div className="max-w-md mx-auto pt-24">
         <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 shadow-lg">
           <h2 className="text-2xl font-semibold text-center mb-6">
-            Bem-vindo de volta
+            {view === "sign_in" ? "Bem-vindo de volta" : "Crie sua conta"}
           </h2>
           <Auth
             supabaseClient={supabase}
+            view={view}
+            onViewChange={newView => setView(newView as "sign_in" | "sign_up")}
             appearance={{
               theme: ThemeSupa,
               variables: {
