@@ -12,6 +12,36 @@ const SignIn = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+
+  const handleResendConfirmation = async () => {
+    if (isResendingEmail) {
+      toast.error("Aguarde antes de solicitar um novo email");
+      return;
+    }
+
+    setIsResendingEmail(true);
+    
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Email de confirmação reenviado com sucesso");
+    } catch (error: any) {
+      if (error.message.includes("rate limit")) {
+        toast.error("Aguarde alguns minutos antes de solicitar um novo email");
+      } else {
+        toast.error("Erro ao reenviar email de confirmação");
+      }
+    } finally {
+      // Reset after 60 seconds
+      setTimeout(() => setIsResendingEmail(false), 60000);
+    }
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,29 +55,26 @@ const SignIn = () => {
 
       if (error) {
         if (error.message.includes("Email not confirmed")) {
-          // Send a new confirmation email
-          const { error: resendError } = await supabase.auth.resend({
-            type: 'signup',
-            email,
-          });
-          
-          if (resendError) {
-            throw resendError;
-          }
-          
-          toast.error("Email não confirmado. Um novo email de confirmação foi enviado.");
+          toast.error(
+            "Email não confirmado. Clique no botão abaixo para reenviar o email de confirmação.",
+            {
+              action: {
+                label: "Reenviar",
+                onClick: handleResendConfirmation,
+              },
+            }
+          );
+        } else if (error.message.includes("Invalid login credentials")) {
+          toast.error("Email ou senha incorretos");
         } else {
           throw error;
         }
+        return;
       }
       
       // Auth state change will handle navigation and success toast
     } catch (error: any) {
-      if (error.message.includes("Invalid login credentials")) {
-        toast.error("Email ou senha incorretos");
-      } else {
-        toast.error(error.message || "Erro ao fazer login");
-      }
+      toast.error(error.message || "Erro ao fazer login");
     } finally {
       setLoading(false);
     }
@@ -93,7 +120,7 @@ const SignIn = () => {
             <Button
               type="submit"
               className="w-full"
-              disabled={loading}
+              disabled={loading || isResendingEmail}
             >
               {loading ? "Entrando..." : "Entrar"}
             </Button>
