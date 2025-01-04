@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Campaign } from "@/types/campaign";
-import { Loader2, Pencil } from "lucide-react";
+import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
@@ -44,12 +44,37 @@ export const CampaignList = ({ campaigns, isLoading }: CampaignListProps) => {
       });
 
       setIsEditDialogOpen(false);
-      window.location.reload(); // Recarrega a página para mostrar as alterações
+      window.location.reload();
     } catch (error) {
       console.error("Erro ao atualizar campanha:", error);
       toast({
         title: "Erro ao atualizar campanha",
         description: "Não foi possível atualizar a campanha. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (campaignId: number) => {
+    try {
+      const { error } = await supabase
+        .from("campanhas_marketing")
+        .delete()
+        .eq("id", campaignId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Campanha excluída com sucesso!",
+        description: "A campanha foi removida do calendário.",
+      });
+
+      window.location.reload();
+    } catch (error) {
+      console.error("Erro ao excluir campanha:", error);
+      toast({
+        title: "Erro ao excluir campanha",
+        description: "Não foi possível excluir a campanha. Tente novamente.",
         variant: "destructive",
       });
     }
@@ -80,16 +105,25 @@ export const CampaignList = ({ campaigns, isLoading }: CampaignListProps) => {
           <Card key={campaign.id} className="bg-neutral-light/50 backdrop-blur-sm">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-xl font-bold">{campaign.nome}</CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setSelectedCampaign(campaign);
-                  setIsEditDialogOpen(true);
-                }}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setSelectedCampaign(campaign);
+                    setIsEditDialogOpen(true);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDelete(campaign.id)}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
