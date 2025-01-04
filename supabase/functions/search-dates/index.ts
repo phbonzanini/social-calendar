@@ -1,13 +1,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { corsHeaders } from '../_shared/cors.ts';
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -114,10 +111,8 @@ Remember to return ONLY the JSON array, no other text.`;
 
       let relevantDates;
       try {
-        // Try to parse the response directly
         relevantDates = JSON.parse(gptContent);
       } catch (firstError) {
-        // If direct parsing fails, try to extract JSON array from the response
         const jsonMatch = gptContent.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           relevantDates = JSON.parse(jsonMatch[0]);
@@ -133,12 +128,8 @@ Remember to return ONLY the JSON array, no other text.`;
         throw new Error('GPT response is not an array');
       }
 
-      // Map back to original date format and validate each date
       const formattedDates = relevantDates
-        .filter(date => {
-          // Ensure the date exists in our original dataset
-          return allDates.some(d => d.data === date.date);
-        })
+        .filter(date => allDates.some(d => d.data === date.date))
         .map(date => {
           const originalDate = allDates.find(d => d.data === date.date);
           if (!originalDate) {
@@ -170,7 +161,7 @@ Remember to return ONLY the JSON array, no other text.`;
     console.error('[ERROR] Function error:', error);
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to process AI response',
+        error: 'Failed to process request',
         details: error instanceof Error ? error.message : 'Unknown error'
       }),
       { 
