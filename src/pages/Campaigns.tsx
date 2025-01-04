@@ -5,7 +5,6 @@ import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Logo } from "@/components/Logo";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { CampaignList } from "@/components/campaigns/CampaignList";
 import { CampaignForm } from "@/components/campaigns/CampaignForm";
@@ -123,11 +122,7 @@ const Campaigns = () => {
       animate={{ opacity: 1 }}
       className="relative min-h-screen p-6 bg-gradient-to-br from-primary-light via-white to-neutral-light"
     >
-      <div className="fixed top-4 left-4 z-10">
-        <Logo />
-      </div>
-
-      <div className="max-w-4xl mx-auto pt-16">
+      <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
             <h1 className="text-3xl font-bold text-neutral-dark">

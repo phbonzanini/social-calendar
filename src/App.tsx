@@ -11,6 +11,7 @@ import Campaigns from "./pages/Campaigns";
 import FinalCalendar from "./pages/FinalCalendar";
 import Login from "./pages/Login";
 import { FeedbackButton } from "./components/FeedbackButton";
+import { Navbar } from "./components/Navbar";
 import { useEffect, useState } from "react";
 import { supabase } from "./integrations/supabase/client";
 
@@ -45,6 +46,17 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
+const AppLayout = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <>
+      <Navbar />
+      <div className="pt-16">
+        {children}
+      </div>
+    </>
+  );
+};
+
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
@@ -58,7 +70,9 @@ const App = () => {
               path="/"
               element={
                 <PrivateRoute>
-                  <Index />
+                  <AppLayout>
+                    <Index />
+                  </AppLayout>
                 </PrivateRoute>
               }
             />
@@ -66,7 +80,9 @@ const App = () => {
               path="/select-niche"
               element={
                 <PrivateRoute>
-                  <SelectNiche />
+                  <AppLayout>
+                    <SelectNiche />
+                  </AppLayout>
                 </PrivateRoute>
               }
             />
@@ -74,7 +90,9 @@ const App = () => {
               path="/calendar"
               element={
                 <PrivateRoute>
-                  <Calendar />
+                  <AppLayout>
+                    <Calendar />
+                  </AppLayout>
                 </PrivateRoute>
               }
             />
@@ -82,7 +100,9 @@ const App = () => {
               path="/campaigns"
               element={
                 <PrivateRoute>
-                  <Campaigns />
+                  <AppLayout>
+                    <Campaigns />
+                  </AppLayout>
                 </PrivateRoute>
               }
             />
@@ -90,7 +110,9 @@ const App = () => {
               path="/final-calendar"
               element={
                 <PrivateRoute>
-                  <FinalCalendar />
+                  <AppLayout>
+                    <FinalCalendar />
+                  </AppLayout>
                 </PrivateRoute>
               }
             />

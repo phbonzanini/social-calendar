@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { CalendarCard } from "@/components/calendar/CalendarCard";
-import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -75,10 +74,7 @@ const Calendar = () => {
       className="relative min-h-screen p-6 bg-gradient-to-br from-primary-light via-white to-neutral-light"
     >
       {isLoading && <LoadingState />}
-      <div className="fixed top-4 left-4 z-10">
-        <Logo />
-      </div>
-      <div className="max-w-4xl mx-auto pt-16">
+      <div className="max-w-4xl mx-auto">
         <CalendarHeader selectedNiches={selectedNiches} />
         {error ? (
           <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 p-6 bg-red-50 rounded-lg">
