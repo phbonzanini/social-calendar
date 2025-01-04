@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { supabase } from "@/integrations/supabase/client";
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -21,7 +21,7 @@ const SignIn = () => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/");
+        navigate("/select-niche");
       }
     };
     
@@ -30,7 +30,7 @@ const SignIn = () => {
     // Monitora mudanças no estado de autenticação
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_IN" && session) {
-        navigate("/");
+        navigate("/select-niche");
       }
     });
 
@@ -41,66 +41,68 @@ const SignIn = () => {
 
   const handleResendConfirmation = async () => {
     if (isResendingEmail) {
-      toast.error("Aguarde 60 segundos antes de solicitar novamente");
       return;
     }
 
-    setIsResendingEmail(true);
-    
     try {
+      setIsResendingEmail(true);
       const { error } = await supabase.auth.resend({
         type: 'signup',
-        email,
+        email: email,
       });
+
+      if (error) throw error;
+
+      toast.success("Email de confirmação reenviado com sucesso!");
       
-      if (error) {
-        if (error.message.includes("rate limit")) {
-          toast.error("Aguarde alguns minutos antes de solicitar um novo email");
-        } else {
-          toast.error("Erro ao reenviar email de confirmação");
-        }
-        return;
-      }
-      
-      toast.success("Email de confirmação reenviado com sucesso");
-      setShowConfirmationAlert(true);
-    } finally {
+      // Inicia o contador de 60 segundos
       setTimeout(() => {
         setIsResendingEmail(false);
       }, 60000);
+      
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao reenviar email de confirmação");
+      setIsResendingEmail(false);
     }
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setShowConfirmationAlert(false);
+    
+    if (!email || !password) {
+      toast.error("Por favor, preencha todos os campos");
+      return;
+    }
 
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        if (error.message.includes("Email not confirmed")) {
+        if (error.message === "Email not confirmed") {
           setShowConfirmationAlert(true);
           toast.error(
-            "Email não confirmado. Clique no botão abaixo para reenviar o email de confirmação.",
+            "Email não confirmado",
             {
+              description: "Clique no botão abaixo para reenviar o email de confirmação",
               action: {
-                label: "Reenviar",
+                label: isResendingEmail ? "Aguarde..." : "Reenviar",
                 onClick: handleResendConfirmation,
               },
-              duration: 10000,
             }
           );
-        } else if (error.message.includes("Invalid login credentials")) {
-          toast.error("Email ou senha incorretos");
-        } else {
-          throw error;
+          return;
         }
-        return;
+        
+        if (error.message === "Invalid login credentials") {
+          toast.error("Email ou senha inválidos");
+          return;
+        }
+        
+        throw error;
       }
       
       toast.success("Login realizado com sucesso!");
@@ -112,65 +114,90 @@ const SignIn = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-neutral-light p-6">
-      <div className="fixed top-4 left-4">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-primary-light via-white to-neutral-light">
+      <div className="mb-8">
         <Logo />
       </div>
-      <div className="max-w-md mx-auto pt-24">
-        <div className="bg-white/80 backdrop-blur-sm rounded-lg p-6 shadow-lg">
-          <h2 className="text-2xl font-semibold text-center mb-6">
-            Bem-vindo de volta
-          </h2>
-          {showConfirmationAlert && (
-            <Alert className="mb-6">
-              <AlertDescription>
-                Por favor, verifique seu email para confirmar sua conta. 
-                Se você não recebeu o email, clique em "Reenviar" acima.
-              </AlertDescription>
-            </Alert>
-          )}
-          <form onSubmit={handleSignIn} className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1">
-                Email
-              </label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Seu endereço de email"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1">
-                Senha
-              </label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Sua senha"
-                required
-              />
-            </div>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading || isResendingEmail}
-            >
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
-          </form>
-          <p className="text-center mt-4 text-sm">
-            Não tem uma conta?{" "}
-            <Link to="/signup" className="text-primary hover:underline">
-              Cadastre-se
-            </Link>
-          </p>
+      
+      <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-lg">
+        <div className="space-y-2 text-center">
+          <h1 className="text-2xl font-bold">Bem-vindo de volta!</h1>
+          <p className="text-neutral">Faça login para continuar</p>
         </div>
+
+        {showConfirmationAlert && (
+          <Alert>
+            <AlertDescription>
+              Por favor, confirme seu email para continuar. 
+              {isResendingEmail ? (
+                <span className="block mt-2 text-sm text-neutral">
+                  Aguarde 60 segundos antes de solicitar um novo email...
+                </span>
+              ) : (
+                <Button
+                  variant="link"
+                  className="ml-2"
+                  onClick={handleResendConfirmation}
+                  disabled={isResendingEmail}
+                >
+                  Reenviar email de confirmação
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSignIn} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seu@email.com"
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password">Senha</Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => navigate("/forgot-password")}
+              className="text-sm"
+            >
+              Esqueceu a senha?
+            </Button>
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => navigate("/signup")}
+              className="text-sm"
+            >
+              Criar conta
+            </Button>
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading}
+          >
+            {loading ? "Entrando..." : "Entrar"}
+          </Button>
+        </form>
       </div>
     </div>
   );
