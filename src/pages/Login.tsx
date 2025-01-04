@@ -100,9 +100,7 @@ const Login = () => {
                 },
               },
             }}
-            onViewChange={(newView) => {
-              setView(newView as "sign_in" | "sign_up");
-            }}
+            magicLink={false}
           />
         </div>
       </div>
