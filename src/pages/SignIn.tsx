@@ -23,11 +23,31 @@ const SignIn = () => {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes("Email not confirmed")) {
+          // Send a new confirmation email
+          const { error: resendError } = await supabase.auth.resend({
+            type: 'signup',
+            email,
+          });
+          
+          if (resendError) {
+            throw resendError;
+          }
+          
+          toast.error("Email não confirmado. Um novo email de confirmação foi enviado.");
+        } else {
+          throw error;
+        }
+      }
       
       // Auth state change will handle navigation and success toast
     } catch (error: any) {
-      toast.error(error.message || "Erro ao fazer login");
+      if (error.message.includes("Invalid login credentials")) {
+        toast.error("Email ou senha incorretos");
+      } else {
+        toast.error(error.message || "Erro ao fazer login");
+      }
     } finally {
       setLoading(false);
     }
