@@ -8,7 +8,8 @@ import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { CalendarCard } from "@/components/calendar/CalendarCard";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 interface CalendarDate {
   date: string;
@@ -16,6 +17,8 @@ interface CalendarDate {
   category: "commemorative" | "holiday" | "optional";
   description: string;
 }
+
+const STORAGE_KEY = "selectedNiches";
 
 const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> => {
   if (!niches || niches.length === 0) {
@@ -42,7 +45,6 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       return [];
     }
 
-    // Map the dates to ensure consistent category values
     const mappedDates = data.dates.map((date: any) => ({
       ...date,
       category: date.category.toLowerCase(),
@@ -76,8 +78,28 @@ const Calendar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const selectedNiches = location.state?.selectedNiches || [];
   const [selectedDates, setSelectedDates] = useState<CalendarDate[]>([]);
+
+  // Get niches from location state or localStorage
+  const getNiches = () => {
+    if (location.state?.selectedNiches) {
+      // Save to localStorage when coming from niche selection
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(location.state.selectedNiches));
+      return location.state.selectedNiches;
+    }
+    
+    // Try to get from localStorage
+    const storedNiches = localStorage.getItem(STORAGE_KEY);
+    if (storedNiches) {
+      return JSON.parse(storedNiches);
+    }
+    
+    // If no niches found, redirect to selection
+    navigate("/select-niche");
+    return [];
+  };
+
+  const selectedNiches = getNiches();
 
   const { data: dates, isLoading, error } = useQuery({
     queryKey: ["calendar-dates", selectedNiches],
@@ -116,6 +138,14 @@ const Calendar = () => {
     }
     navigate("/campaigns", { state: { selectedDates } });
   };
+
+  // If no niches are selected and we're not loading, redirect to niche selection
+  useEffect(() => {
+    if (!isLoading && (!selectedNiches || selectedNiches.length === 0)) {
+      toast.error("Nenhum nicho selecionado. Por favor, selecione pelo menos um nicho.");
+      navigate("/select-niche");
+    }
+  }, [isLoading, selectedNiches, navigate]);
 
   return (
     <motion.div
