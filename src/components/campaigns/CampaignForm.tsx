@@ -111,6 +111,18 @@ export const CampaignForm = ({ onSubmit, initialData, isEditing = false }: Campa
               </FormItem>
             )}
           />
+          <FormField
+            control={form.control}
+            name="data_comemorativa"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Data Comemorativa</FormLabel>
+                <FormControl>
+                  <Input {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
           <Button type="submit" className="w-full">
             {isEditing ? "Salvar Alterações" : "Criar Campanha"}
           </Button>

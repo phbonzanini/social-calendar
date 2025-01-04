@@ -92,7 +92,7 @@ export const MonthCard = ({ month, monthIndex, campaigns }: MonthCardProps) => {
         <h3 className="font-semibold text-lg mb-3 text-neutral-dark">{month}</h3>
         <div className="space-y-2">
           {monthCampaigns.map(campaign => (
-            <Dialog key={campaign.id} open={isEditing && selectedCampaign?.id === campaign.id} onOpenChange={(open) => !open && setIsEditing(false)}>
+            <Dialog key={campaign.id}>
               <DialogTrigger asChild>
                 <div
                   className="text-sm p-2 bg-primary/10 rounded-md hover:bg-primary/20 transition-colors cursor-pointer"
