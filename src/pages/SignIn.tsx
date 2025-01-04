@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
@@ -15,6 +15,29 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
+
+  // Adiciona verificação de autenticação ao carregar o componente
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/");
+      }
+    };
+    
+    checkAuth();
+
+    // Monitora mudanças no estado de autenticação
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        navigate("/");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   const handleResendConfirmation = async () => {
     if (isResendingEmail) {
@@ -80,7 +103,7 @@ const SignIn = () => {
         return;
       }
       
-      // Auth state change will handle navigation and success toast
+      toast.success("Login realizado com sucesso!");
     } catch (error: any) {
       toast.error(error.message || "Erro ao fazer login");
     } finally {
