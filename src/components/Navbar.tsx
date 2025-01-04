@@ -101,16 +101,22 @@ export const Navbar = () => {
                   <User className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent 
+                align="end" 
+                className="w-48 bg-white shadow-lg rounded-md border border-neutral-200"
+              >
                 <DropdownMenuItem 
                   onClick={handlePasswordReset}
                   disabled={isResetting}
-                  className={isResetting ? "opacity-50 cursor-not-allowed" : ""}
+                  className={`${isResetting ? "opacity-50 cursor-not-allowed" : ""} hover:bg-neutral-100`}
                 >
                   <Settings className="mr-2 h-4 w-4" />
                   {isResetting ? "Aguarde..." : "Redefinir Senha"}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>
+                <DropdownMenuItem 
+                  onClick={handleLogout}
+                  className="hover:bg-neutral-100"
+                >
                   <LogOut className="mr-2 h-4 w-4" />
                   Sair
                 </DropdownMenuItem>
