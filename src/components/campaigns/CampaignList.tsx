@@ -5,6 +5,16 @@ import { Campaign } from "@/types/campaign";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useState } from "react";
 import { CampaignForm } from "./CampaignForm";
 import { useToast } from "@/hooks/use-toast";
@@ -17,6 +27,7 @@ interface CampaignListProps {
 
 export const CampaignList = ({ campaigns, isLoading }: CampaignListProps) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const { toast } = useToast();
 
@@ -119,7 +130,10 @@ export const CampaignList = ({ campaigns, isLoading }: CampaignListProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => handleDelete(campaign.id)}
+                  onClick={() => {
+                    setSelectedCampaign(campaign);
+                    setIsDeleteDialogOpen(true);
+                  }}
                 >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
@@ -172,6 +186,31 @@ export const CampaignList = ({ campaigns, isLoading }: CampaignListProps) => {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (selectedCampaign) {
+                  handleDelete(selectedCampaign.id);
+                  setIsDeleteDialogOpen(false);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
