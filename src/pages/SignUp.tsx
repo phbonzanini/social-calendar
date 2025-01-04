@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Label } from "@/components/ui/label";
 
 const SignUp = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [isRateLimited, setIsRateLimited] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -27,15 +28,25 @@ const SignUp = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+
+    if (isRateLimited) {
+      toast.error("Por favor, aguarde alguns segundos antes de tentar novamente");
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       toast.error("As senhas não coincidem");
-      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
       return;
     }
 
     try {
+      setLoading(true);
+
       const { error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -47,9 +58,19 @@ const SignUp = () => {
         },
       });
 
-      if (error) throw error;
-      
-      // Auth state change will handle navigation and success toast
+      if (error) {
+        if (error.message.includes("rate_limit") || error.status === 429) {
+          setIsRateLimited(true);
+          setTimeout(() => {
+            setIsRateLimited(false);
+          }, 60000); // Reset after 60 seconds
+          throw new Error("Por favor, aguarde alguns segundos antes de tentar novamente");
+        }
+        throw error;
+      }
+
+      toast.success("Conta criada com sucesso!");
+      navigate("/signin");
     } catch (error: any) {
       toast.error(error.message || "Erro ao criar conta");
     } finally {
@@ -68,10 +89,8 @@ const SignUp = () => {
             Crie sua conta
           </h2>
           <form onSubmit={handleSignUp} className="space-y-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium mb-1">
-                Nome
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome</Label>
               <Input
                 id="name"
                 type="text"
@@ -81,10 +100,8 @@ const SignUp = () => {
                 required
               />
             </div>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium mb-1">
-                Email
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -94,10 +111,8 @@ const SignUp = () => {
                 required
               />
             </div>
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium mb-1">
-                Telefone
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -107,10 +122,8 @@ const SignUp = () => {
                 required
               />
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium mb-1">
-                Senha
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
               <Input
                 id="password"
                 type="password"
@@ -121,10 +134,8 @@ const SignUp = () => {
                 minLength={6}
               />
             </div>
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
-                Confirme sua senha
-              </label>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirme sua senha</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -138,9 +149,9 @@ const SignUp = () => {
             <Button
               type="submit"
               className="w-full"
-              disabled={loading}
+              disabled={loading || isRateLimited}
             >
-              {loading ? "Criando conta..." : "Criar conta"}
+              {loading ? "Criando conta..." : isRateLimited ? "Aguarde..." : "Criar conta"}
             </Button>
           </form>
           <p className="text-center mt-4 text-sm">
