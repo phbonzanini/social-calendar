@@ -21,14 +21,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 interface CampaignFormProps {
   onSubmit: (values: FormValues) => Promise<void>;
-  initialData?: FormValues;
+  defaultValues?: FormValues;
   isEditing?: boolean;
 }
 
-export const CampaignForm = ({ onSubmit, initialData, isEditing = false }: CampaignFormProps) => {
+export const CampaignForm = ({ onSubmit, defaultValues, isEditing = false }: CampaignFormProps) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: defaultValues || {
       nome: "",
       data_inicio: "",
       data_fim: "",
@@ -39,95 +39,90 @@ export const CampaignForm = ({ onSubmit, initialData, isEditing = false }: Campa
   });
 
   useEffect(() => {
-    if (initialData) {
-      form.reset(initialData);
+    if (defaultValues) {
+      form.reset(defaultValues);
     }
-  }, [initialData, form]);
+  }, [defaultValues, form]);
 
   return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{isEditing ? "Editar Campanha" : "Criar Nova Campanha"}</DialogTitle>
-      </DialogHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="nome"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome da Campanha</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="data_inicio"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Data de Início</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="data_fim"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Data de Fim</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="objetivo"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Objetivo</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="descricao"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Descrição</FormLabel>
-                <FormControl>
-                  <Textarea {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="data_comemorativa"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Data Comemorativa</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <Button type="submit" className="w-full">
-            {isEditing ? "Salvar Alterações" : "Criar Campanha"}
-          </Button>
-        </form>
-      </Form>
-    </DialogContent>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="nome"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Nome da Campanha</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="data_inicio"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Data de Início</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="data_fim"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Data de Fim</FormLabel>
+              <FormControl>
+                <Input type="date" {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="objetivo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Objetivo</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="descricao"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descrição</FormLabel>
+              <FormControl>
+                <Textarea {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="data_comemorativa"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Data Comemorativa</FormLabel>
+              <FormControl>
+                <Input {...field} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full">
+          {isEditing ? "Salvar Alterações" : "Criar Campanha"}
+        </Button>
+      </form>
+    </Form>
   );
 };
