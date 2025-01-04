@@ -84,8 +84,7 @@ const Login = () => {
                   button_label: 'Entrar',
                   loading_button_label: 'Entrando...',
                   email_input_placeholder: 'Seu endereço de email',
-                  link_text: 'Já tem uma conta? Entre',
-                  forgotten_password_label: 'Esqueceu sua senha?'
+                  link_text: 'Não tem uma conta? Cadastre-se',
                 },
                 sign_up: {
                   email_label: 'Email',
@@ -94,16 +93,13 @@ const Login = () => {
                   button_label: 'Criar conta',
                   loading_button_label: 'Criando conta...',
                   email_input_placeholder: 'Seu endereço de email',
-                  link_text: 'Não tem uma conta? Cadastre-se',
-                  confirmation_text: 'Verifique seu email para confirmar o cadastro'
+                  link_text: 'Já tem uma conta? Entre',
                 },
                 forgotten_password: {
                   email_label: 'Email',
-                  password_label: 'Senha',
                   button_label: 'Enviar instruções',
                   loading_button_label: 'Enviando instruções...',
                   link_text: 'Esqueceu sua senha?',
-                  confirmation_text: 'Verifique seu email para redefinir sua senha'
                 },
               },
             }}
