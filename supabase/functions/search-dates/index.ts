@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const { niches } = await req.json();
-    console.log("Received request for niches:", niches);
+    console.log("[DEBUG] Processing request for niches:", niches);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Niches array is required');
@@ -25,10 +25,12 @@ serve(async (req) => {
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
     if (!supabaseUrl || !supabaseKey || !openAIApiKey) {
+      console.error("[ERROR] Missing environment variables");
       throw new Error('Missing environment variables');
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+    console.log("[DEBUG] Supabase client initialized");
 
     // Fetch all dates from the database
     const { data: allDates, error: dbError } = await supabase
@@ -36,53 +38,44 @@ serve(async (req) => {
       .select('*');
 
     if (dbError) {
-      console.error('Database error:', dbError);
+      console.error('[ERROR] Database error:', dbError);
       throw new Error(`Database error: ${dbError.message}`);
     }
 
     if (!allDates || allDates.length === 0) {
-      console.log("No dates found in database");
+      console.log("[INFO] No dates found in database");
       return new Response(
         JSON.stringify({ dates: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`Found ${allDates.length} dates in database`);
+    console.log(`[DEBUG] Found ${allDates.length} dates in database`);
 
     // Format dates for GPT analysis
     const datesForAnalysis = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
-      type: date.tipo
+      category: date.tipo
     }));
 
-    // Prepare prompt for GPT
-    const prompt = `
-    Você é um especialista em marketing que ajuda a identificar datas comemorativas relevantes para diferentes nichos de negócio.
-    
-    Analise as seguintes datas comemorativas e determine quais são relevantes para os nichos: ${niches.join(', ')}.
-    
-    Datas para análise:
-    ${JSON.stringify(datesForAnalysis, null, 2)}
+    const systemPrompt = `You are a marketing expert that helps identify relevant commemorative dates for different business niches. You will analyze dates and determine their relevance for specific niches. You must return ONLY a JSON array with the relevant dates.`;
 
-    Para cada data, avalie:
-    1. Se ela tem relevância direta ou indireta para os nichos mencionados
-    2. Como essa data pode ser aproveitada para marketing no nicho
-    
-    Retorne APENAS um array JSON com as datas relevantes, mantendo a mesma estrutura de dados (date, title, type).
-    Exemplo de resposta esperada:
-    [
-      {
-        "date": "2025-01-01",
-        "title": "Ano Novo",
-        "type": "holiday"
-      }
-    ]
-    
-    Responda SOMENTE com o array JSON, sem texto adicional.`;
+    const userPrompt = `Analyze these commemorative dates and determine which ones are relevant for these niches: ${niches.join(', ')}.
 
-    console.log("Sending request to GPT");
+Dates to analyze:
+${JSON.stringify(datesForAnalysis, null, 2)}
+
+Return ONLY a JSON array with the relevant dates in this exact format:
+[
+  {
+    "date": "2025-01-01",
+    "title": "New Year's Day",
+    "category": "holiday"
+  }
+]`;
+
+    console.log("[DEBUG] Sending request to GPT");
 
     // Call GPT API
     const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -94,35 +87,42 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: 'Você é um especialista em marketing que ajuda a identificar datas comemorativas relevantes para diferentes nichos de negócio.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
       }),
     });
 
     if (!gptResponse.ok) {
-      console.error('GPT API error:', await gptResponse.text());
+      const errorText = await gptResponse.text();
+      console.error('[ERROR] GPT API error:', errorText);
       throw new Error(`OpenAI API error: ${gptResponse.status}`);
     }
 
     const gptData = await gptResponse.json();
-    console.log("Received GPT response");
+    console.log("[DEBUG] Received GPT response");
+
+    if (!gptData.choices?.[0]?.message?.content) {
+      console.error('[ERROR] Invalid GPT response structure:', gptData);
+      throw new Error('Invalid GPT response structure');
+    }
 
     try {
-      // Parse GPT response and extract relevant dates
       const gptContent = gptData.choices[0].message.content;
-      console.log("GPT content:", gptContent);
-      
-      const relevantDates = JSON.parse(gptContent);
-      
+      console.log("[DEBUG] Raw GPT content:", gptContent);
+
+      let relevantDates;
+      try {
+        relevantDates = JSON.parse(gptContent);
+      } catch (parseError) {
+        console.error('[ERROR] Failed to parse GPT content:', parseError);
+        console.error('[ERROR] GPT content was:', gptContent);
+        throw new Error('Failed to parse GPT response as JSON');
+      }
+
       if (!Array.isArray(relevantDates)) {
+        console.error('[ERROR] GPT response is not an array:', relevantDates);
         throw new Error('GPT response is not an array');
       }
 
@@ -130,8 +130,13 @@ serve(async (req) => {
       const formattedDates = relevantDates.map(date => {
         const originalDate = allDates.find(d => d.data === date.date);
         if (!originalDate) {
-          console.warn(`Could not find original date for ${date.date}`);
-          return date;
+          console.warn(`[WARN] Could not find original date for ${date.date}`);
+          return {
+            date: date.date,
+            title: date.title,
+            category: date.category || 'commemorative',
+            description: date.description || date.title
+          };
         }
         return {
           date: date.date,
@@ -141,7 +146,7 @@ serve(async (req) => {
         };
       });
 
-      console.log(`Returning ${formattedDates.length} relevant dates`);
+      console.log(`[INFO] Returning ${formattedDates.length} relevant dates`);
 
       return new Response(
         JSON.stringify({ dates: formattedDates }),
@@ -149,17 +154,16 @@ serve(async (req) => {
       );
 
     } catch (error) {
-      console.error('Error processing GPT response:', error);
-      console.error('GPT content was:', gptData.choices[0].message.content);
-      throw new Error('Failed to process AI response');
+      console.error('[ERROR] Error processing GPT response:', error);
+      throw error;
     }
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('[ERROR] Function error:', error);
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error',
-        details: "Erro ao processar a requisição"
+        details: error instanceof Error ? error.stack : 'No stack trace available'
       }),
       { 
         status: 500,
