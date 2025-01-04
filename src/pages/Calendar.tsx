@@ -1,78 +1,15 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { CalendarHeader } from "@/components/calendar/CalendarHeader";
 import { CalendarCard } from "@/components/calendar/CalendarCard";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
-import { toast } from "sonner";
-
-interface CalendarDate {
-  date: string;
-  title: string;
-  category: "commemorative" | "holiday" | "optional";
-  description: string;
-}
-
-const STORAGE_KEY = "selectedNiches";
-
-const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> => {
-  if (!niches || niches.length === 0) {
-    throw new Error("Nenhum nicho selecionado");
-  }
-
-  console.log("Buscando datas para os nichos:", niches);
-
-  try {
-    const { data, error } = await supabase.functions.invoke(
-      "search-dates",
-      {
-        body: { niches },
-      }
-    );
-
-    if (error) {
-      console.error("Erro na função de busca:", error);
-      throw new Error(`Erro na função de busca: ${error.message}`);
-    }
-
-    if (!data?.dates) {
-      console.log("Nenhuma data encontrada");
-      return [];
-    }
-
-    const mappedDates = data.dates.map((date: any) => ({
-      ...date,
-      category: date.category.toLowerCase(),
-    }));
-
-    console.log("Datas encontradas:", mappedDates);
-    return mappedDates;
-
-  } catch (error) {
-    console.error("Erro ao buscar datas:", error);
-    throw error instanceof Error 
-      ? error 
-      : new Error("Erro desconhecido ao buscar datas");
-  }
-};
-
-const LoadingState = () => (
-  <div className="fixed inset-0 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-50">
-    <Loader2 className="h-12 w-12 animate-spin text-primary" />
-    <div className="text-center max-w-md px-4">
-      <h3 className="text-lg font-semibold mb-2">Analisando datas relevantes</h3>
-      <p className="text-muted-foreground">
-        Estamos buscando as datas mais relevantes para os nichos selecionados. 
-        Isso pode levar alguns segundos...
-      </p>
-    </div>
-  </div>
-);
+import { useToast } from "@/hooks/use-toast";
+import { LoadingState } from "@/components/calendar/LoadingState";
+import { getNiches } from "@/utils/nicheUtils";
+import { fetchDatesForNiches, type CalendarDate } from "@/services/dateService";
 
 const Calendar = () => {
   const location = useLocation();
@@ -80,26 +17,7 @@ const Calendar = () => {
   const { toast } = useToast();
   const [selectedDates, setSelectedDates] = useState<CalendarDate[]>([]);
 
-  // Get niches from location state or localStorage
-  const getNiches = () => {
-    if (location.state?.selectedNiches) {
-      // Save to localStorage when coming from niche selection
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(location.state.selectedNiches));
-      return location.state.selectedNiches;
-    }
-    
-    // Try to get from localStorage
-    const storedNiches = localStorage.getItem(STORAGE_KEY);
-    if (storedNiches) {
-      return JSON.parse(storedNiches);
-    }
-    
-    // If no niches found, redirect to selection
-    navigate("/select-niche");
-    return [];
-  };
-
-  const selectedNiches = getNiches();
+  const selectedNiches = getNiches(location.state, navigate);
 
   const { data: dates, isLoading, error } = useQuery({
     queryKey: ["calendar-dates", selectedNiches],
@@ -139,10 +57,13 @@ const Calendar = () => {
     navigate("/campaigns", { state: { selectedDates } });
   };
 
-  // If no niches are selected and we're not loading, redirect to niche selection
   useEffect(() => {
     if (!isLoading && (!selectedNiches || selectedNiches.length === 0)) {
-      toast.error("Nenhum nicho selecionado. Por favor, selecione pelo menos um nicho.");
+      toast({
+        title: "Nenhum nicho selecionado",
+        description: "Por favor, selecione pelo menos um nicho.",
+        variant: "destructive",
+      });
       navigate("/select-niche");
     }
   }, [isLoading, selectedNiches, navigate]);
