@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const SignIn = () => {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ const SignIn = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
 
   const handleResendConfirmation = async () => {
     if (isResendingEmail) {
@@ -38,8 +40,8 @@ const SignIn = () => {
       }
       
       toast.success("Email de confirmação reenviado com sucesso");
+      setShowConfirmationAlert(true);
     } finally {
-      // Set a timeout to re-enable the button after 60 seconds
       setTimeout(() => {
         setIsResendingEmail(false);
       }, 60000);
@@ -49,6 +51,7 @@ const SignIn = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setShowConfirmationAlert(false);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -58,6 +61,7 @@ const SignIn = () => {
 
       if (error) {
         if (error.message.includes("Email not confirmed")) {
+          setShowConfirmationAlert(true);
           toast.error(
             "Email não confirmado. Clique no botão abaixo para reenviar o email de confirmação.",
             {
@@ -65,7 +69,7 @@ const SignIn = () => {
                 label: "Reenviar",
                 onClick: handleResendConfirmation,
               },
-              duration: 10000, // Show for 10 seconds to give user time to click
+              duration: 10000,
             }
           );
         } else if (error.message.includes("Invalid login credentials")) {
@@ -94,6 +98,14 @@ const SignIn = () => {
           <h2 className="text-2xl font-semibold text-center mb-6">
             Bem-vindo de volta
           </h2>
+          {showConfirmationAlert && (
+            <Alert className="mb-6">
+              <AlertDescription>
+                Por favor, verifique seu email para confirmar sua conta. 
+                Se você não recebeu o email, clique em "Reenviar" acima.
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSignIn} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-1">
