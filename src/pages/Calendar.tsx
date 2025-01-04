@@ -42,8 +42,14 @@ const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDate[]> =>
       return [];
     }
 
-    console.log("Datas encontradas:", data.dates);
-    return data.dates;
+    // Map the dates to ensure consistent category values
+    const mappedDates = data.dates.map((date: any) => ({
+      ...date,
+      category: date.category.toLowerCase(),
+    }));
+
+    console.log("Datas encontradas:", mappedDates);
+    return mappedDates;
 
   } catch (error) {
     console.error("Erro ao buscar datas:", error);

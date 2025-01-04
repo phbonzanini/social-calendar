@@ -19,24 +19,30 @@ interface CalendarCardProps {
 }
 
 const getCategoryLabel = (category: string) => {
-  switch (category) {
+  switch (category.toLowerCase()) {
+    case "data comemorativa":
     case "commemorative":
       return "Data Comemorativa";
+    case "feriado nacional":
     case "holiday":
       return "Feriado Nacional";
+    case "ponto facultativo":
     case "optional":
       return "Ponto Facultativo";
     default:
-      return "";
+      return category;
   }
 };
 
 const getCategoryColor = (category: string) => {
-  switch (category) {
+  switch (category.toLowerCase()) {
+    case "data comemorativa":
     case "commemorative":
       return "bg-blue-100 text-blue-800";
+    case "feriado nacional":
     case "holiday":
       return "bg-red-100 text-red-800";
+    case "ponto facultativo":
     case "optional":
       return "bg-amber-100 text-amber-800";
     default:
@@ -57,7 +63,7 @@ export const CalendarCard = ({
       transition={{ delay: index * 0.1 }}
     >
       <Card
-        className={`relative cursor-pointer transition-all hover:shadow-md ${
+        className={`relative cursor-pointer transition-all hover:shadow-md bg-white ${
           isSelected ? "ring-2 ring-primary" : ""
         }`}
         onClick={onSelect}
