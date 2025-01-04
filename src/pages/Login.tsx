@@ -22,11 +22,16 @@ const Login = () => {
       async (event: string, session: Session | null) => {
         switch (event) {
           case 'SIGNED_UP':
-            toast.success('Conta criada com sucesso! Você já pode fazer login.');
+            // After signup, user needs to login
+            toast.success('Conta criada com sucesso! Por favor, faça login.');
             break;
           case 'SIGNED_IN':
-            toast.success('Login realizado com sucesso!');
-            navigate("/select-niche");
+            if (session) {
+              toast.success('Login realizado com sucesso!');
+              navigate("/select-niche");
+            } else {
+              toast.error('Erro ao fazer login. Tente novamente.');
+            }
             break;
           case 'SIGNED_OUT':
             toast.info('Você foi desconectado');
