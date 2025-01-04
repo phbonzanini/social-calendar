@@ -10,9 +10,11 @@ import {
 } from "./ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useState } from "react";
 
 export const Navbar = () => {
   const navigate = useNavigate();
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -25,9 +27,17 @@ export const Navbar = () => {
   };
 
   const handlePasswordReset = async () => {
+    if (isResetting) {
+      toast.error("Aguarde 60 segundos antes de solicitar novamente");
+      return;
+    }
+
+    setIsResetting(true);
+    
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.email) {
       toast.error("Erro ao identificar seu email");
+      setIsResetting(false);
       return;
     }
 
@@ -36,10 +46,19 @@ export const Navbar = () => {
     });
 
     if (error) {
-      toast.error("Erro ao enviar email de redefinição de senha");
+      if (error.message.includes("rate_limit")) {
+        toast.error("Aguarde alguns segundos antes de tentar novamente");
+      } else {
+        toast.error("Erro ao enviar email de redefinição de senha");
+      }
     } else {
       toast.success("Email de redefinição de senha enviado");
     }
+
+    // Set a timeout to re-enable the button after 60 seconds
+    setTimeout(() => {
+      setIsResetting(false);
+    }, 60000);
   };
 
   return (
@@ -83,9 +102,13 @@ export const Navbar = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={handlePasswordReset}>
+                <DropdownMenuItem 
+                  onClick={handlePasswordReset}
+                  disabled={isResetting}
+                  className={isResetting ? "opacity-50 cursor-not-allowed" : ""}
+                >
                   <Settings className="mr-2 h-4 w-4" />
-                  Redefinir Senha
+                  {isResetting ? "Aguarde..." : "Redefinir Senha"}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
