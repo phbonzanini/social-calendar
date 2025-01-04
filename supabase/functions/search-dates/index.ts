@@ -14,7 +14,7 @@ serve(async (req) => {
 
   try {
     const { niches } = await req.json();
-    console.log("Buscando datas para os nichos:", niches);
+    console.log("Received request for niches:", niches);
 
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Niches array is required');
@@ -43,23 +43,24 @@ serve(async (req) => {
     if (!allDates || allDates.length === 0) {
       console.log("No dates found in database");
       return new Response(
-        JSON.stringify({ 
-          dates: [],
-          message: "Nenhuma data encontrada no banco de dados"
-        }),
+        JSON.stringify({ dates: [] }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    console.log(`Found ${allDates.length} dates in database`);
+
     // Format dates for GPT analysis
     const datesForAnalysis = allDates.map(date => ({
       date: date.data,
-      description: date.descrição,
+      title: date.descrição,
       type: date.tipo
     }));
 
     // Prepare prompt for GPT
     const prompt = `
+    Você é um especialista em marketing que ajuda a identificar datas comemorativas relevantes para diferentes nichos de negócio.
+    
     Analise as seguintes datas comemorativas e determine quais são relevantes para os nichos: ${niches.join(', ')}.
     
     Datas para análise:
@@ -68,10 +69,20 @@ serve(async (req) => {
     Para cada data, avalie:
     1. Se ela tem relevância direta ou indireta para os nichos mencionados
     2. Como essa data pode ser aproveitada para marketing no nicho
-    3. Se a data não tiver nenhuma relevância, exclua-a da lista
+    
+    Retorne APENAS um array JSON com as datas relevantes, mantendo a mesma estrutura de dados (date, title, type).
+    Exemplo de resposta esperada:
+    [
+      {
+        "date": "2025-01-01",
+        "title": "Ano Novo",
+        "type": "holiday"
+      }
+    ]
+    
+    Responda SOMENTE com o array JSON, sem texto adicional.`;
 
-    Retorne apenas as datas relevantes no formato JSON, mantendo a mesma estrutura de dados.
-    `;
+    console.log("Sending request to GPT");
 
     // Call GPT API
     const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -97,21 +108,31 @@ serve(async (req) => {
     });
 
     if (!gptResponse.ok) {
+      console.error('GPT API error:', await gptResponse.text());
       throw new Error(`OpenAI API error: ${gptResponse.status}`);
     }
 
     const gptData = await gptResponse.json();
-    console.log("GPT Response:", gptData);
+    console.log("Received GPT response");
 
-    let relevantDates;
     try {
       // Parse GPT response and extract relevant dates
       const gptContent = gptData.choices[0].message.content;
-      relevantDates = JSON.parse(gptContent);
+      console.log("GPT content:", gptContent);
       
+      const relevantDates = JSON.parse(gptContent);
+      
+      if (!Array.isArray(relevantDates)) {
+        throw new Error('GPT response is not an array');
+      }
+
       // Map back to original date format
       const formattedDates = relevantDates.map(date => {
         const originalDate = allDates.find(d => d.data === date.date);
+        if (!originalDate) {
+          console.warn(`Could not find original date for ${date.date}`);
+          return date;
+        }
         return {
           date: date.date,
           title: originalDate.descrição,
@@ -120,7 +141,7 @@ serve(async (req) => {
         };
       });
 
-      console.log("Datas relevantes encontradas:", formattedDates);
+      console.log(`Returning ${formattedDates.length} relevant dates`);
 
       return new Response(
         JSON.stringify({ dates: formattedDates }),
@@ -129,6 +150,7 @@ serve(async (req) => {
 
     } catch (error) {
       console.error('Error processing GPT response:', error);
+      console.error('GPT content was:', gptData.choices[0].message.content);
       throw new Error('Failed to process AI response');
     }
 
