@@ -19,30 +19,13 @@ import { useNavigate } from "react-router-dom";
 
 export const niches = [
   { value: "education", label: "Educação" },
-  { value: "marketing", label: "Marketing" },
-  { value: "health-beauty", label: "Beleza e Saúde" },
-  { value: "sustainability", label: "Sustentabilidade" },
-  { value: "tech", label: "Tecnologia" },
-  { value: "consulting", label: "Consultoria" },
-  { value: "pets", label: "Pets" },
-  { value: "food", label: "Alimentação" },
-  { value: "finance", label: "Finanças" },
   { value: "fashion", label: "Moda" },
-  { value: "events", label: "Eventos" },
-  { value: "realestate", label: "Imóveis" },
-  { value: "tourism", label: "Turismo" },
-  { value: "art-culture", label: "Arte e Cultura" },
-  { value: "sports", label: "Esportes" },
-  { value: "automotive", label: "Automotivo" },
-  { value: "infoproducts", label: "Infoprodutos" },
+  { value: "healthcare", label: "Saúde e Bem-Estar" },
+  { value: "finance", label: "Finanças" },
   { value: "gastronomy", label: "Gastronomia" },
-  { value: "entrepreneurship", label: "Empreendedorismo" },
-  { value: "games", label: "Games" },
-  { value: "weddings", label: "Casamentos" },
-  { value: "industry", label: "Indústria" },
-  { value: "design", label: "Design" },
   { value: "logistics", label: "Logística" },
-  { value: "healthcare", label: "Saúde e Cuidados" }
+  { value: "industry", label: "Indústria" },
+  { value: "tourism", label: "Turismo" }
 ];
 
 export const NicheSelector = () => {
