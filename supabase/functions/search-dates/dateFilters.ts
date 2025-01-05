@@ -2,9 +2,16 @@ import { DateEntry, FormattedDate, nicheMapping } from './types.ts';
 
 export function filterDatesByNiches(dates: DateEntry[], niches: string[]): DateEntry[] {
   console.log(`[dateFilters] Filtering ${dates.length} dates for niches:`, niches);
+  console.log('[dateFilters] Using niche mapping:', nicheMapping);
   
-  const translatedNiches = niches.map(niche => nicheMapping[niche]?.toLowerCase() || niche.toLowerCase());
+  const translatedNiches = niches.map(niche => {
+    const translated = nicheMapping[niche]?.toLowerCase();
+    console.log(`[dateFilters] Translating ${niche} to ${translated}`);
+    return translated || niche.toLowerCase();
+  });
   
+  console.log('[dateFilters] Translated niches:', translatedNiches);
+
   return dates.filter(date => {
     const dateNiches = [
       date['nicho 1']?.toLowerCase(),
@@ -12,8 +19,16 @@ export function filterDatesByNiches(dates: DateEntry[], niches: string[]): DateE
       date['nicho 3']?.toLowerCase()
     ].filter(Boolean);
 
+    console.log(`[dateFilters] Checking date niches:`, dateNiches);
+
     const hasMatchingNiche = translatedNiches.some(niche => 
-      dateNiches.some(dateNiche => dateNiche.includes(niche))
+      dateNiches.some(dateNiche => {
+        const matches = dateNiche.includes(niche);
+        if (matches) {
+          console.log(`[dateFilters] Match found: ${dateNiche} includes ${niche}`);
+        }
+        return matches;
+      })
     );
 
     return hasMatchingNiche;
@@ -41,8 +56,10 @@ export function validateAndFormatDates(
   niches: string[]
 ): FormattedDate[] {
   console.log(`[dateFilters] Validating and formatting ${relevantDates.length} dates`);
+  console.log('[dateFilters] Relevant dates:', relevantDates);
   
   const translatedNiches = niches.map(niche => nicheMapping[niche]?.toLowerCase() || niche.toLowerCase());
+  console.log('[dateFilters] Using translated niches:', translatedNiches);
 
   return relevantDates
     .filter(date => {
@@ -58,8 +75,16 @@ export function validateAndFormatDates(
         originalDate['nicho 3']?.toLowerCase()
       ].filter(Boolean);
 
+      console.log(`[dateFilters] Checking niches for date ${date.date}:`, dateNiches);
+
       const hasMatchingNiche = translatedNiches.some(niche => 
-        dateNiches.some(dateNiche => dateNiche.includes(niche))
+        dateNiches.some(dateNiche => {
+          const matches = dateNiche.includes(niche);
+          if (matches) {
+            console.log(`[dateFilters] Match found for ${date.date}: ${dateNiche} includes ${niche}`);
+          }
+          return matches;
+        })
       );
 
       if (!hasMatchingNiche) {

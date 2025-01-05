@@ -12,6 +12,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
 
   try {
     console.log(`[OpenAI] Attempt ${retryCount + 1}/${MAX_RETRIES}`);
+    console.log('[OpenAI] Sending prompt:', prompt);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -24,11 +25,11 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert specialized in analyzing commemorative dates and their relevance to specific business niches. Return only a JSON array of relevant dates.' 
+            content: 'You are a marketing expert specialized in analyzing commemorative dates and their relevance to specific business niches. Return only a JSON array of relevant dates, with each date having the format { "date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation" }.' 
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.3, // Lower temperature for more consistent results
+        temperature: 0.3,
       }),
     });
 
@@ -47,8 +48,29 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     }
 
     const data = await response.json();
-    return data;
+    console.log('[OpenAI] Raw response:', data);
+    
+    if (!data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response structure from OpenAI');
+    }
+
+    const content = data.choices[0].message.content.trim();
+    console.log('[OpenAI] Parsed content:', content);
+
+    try {
+      // Try to parse the entire response first
+      return JSON.parse(content);
+    } catch (parseError) {
+      console.log('[OpenAI] Failed to parse entire response, trying to extract JSON array');
+      // Try to extract JSON array from the response using regex
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+      throw new Error('Could not extract valid JSON from OpenAI response');
+    }
   } catch (error) {
+    console.error('[OpenAI] Error:', error);
     if (retryCount < MAX_RETRIES) {
       console.log(`[OpenAI] Error occurred. Retrying in ${RETRY_DELAY}ms...`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
