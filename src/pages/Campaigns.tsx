@@ -35,7 +35,6 @@ const Campaigns = () => {
     },
   });
 
-  // Create campaigns automatically from selected dates
   useEffect(() => {
     const createCampaignsFromDates = async () => {
       if (selectedDates && selectedDates.length > 0) {
@@ -45,7 +44,6 @@ const Campaigns = () => {
             throw new Error("User not authenticated");
           }
 
-          // Filter out dates that already have campaigns
           const existingDates = campaigns?.map(campaign => campaign.data_comemorativa) || [];
           const newDates = selectedDates.filter(
             (date: any) => !existingDates.includes(date.title)

@@ -22,7 +22,6 @@ const FinalCalendar = () => {
 
       if (error) throw error;
       
-      // Filter out duplicates based on campaign ID
       const uniqueCampaigns = data?.filter((campaign, index, self) =>
         index === self.findIndex((c) => c.id === campaign.id)
       );
