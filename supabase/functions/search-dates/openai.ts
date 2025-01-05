@@ -25,7 +25,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert. Analyze dates and return ONLY a JSON array in this format: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. No additional text.' 
+            content: 'You are a marketing expert. Return ONLY a valid JSON array of dates in this exact format: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. Do not include any additional text or formatting.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -57,8 +57,8 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     const content = data.choices[0].message.content.trim();
     console.log('[OpenAI] Content:', content);
 
+    // First attempt: direct JSON parse
     try {
-      // First attempt: direct JSON parse
       const parsedData = JSON.parse(content);
       console.log('[OpenAI] Successfully parsed JSON directly');
       
@@ -66,9 +66,26 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         throw new Error('Response is not an array');
       }
       
+      if (parsedData.length === 0) {
+        throw new Error('Response array is empty');
+      }
+
+      // Validate array items
+      parsedData.forEach((item, index) => {
+        if (!item.date || !item.relevance || !item.reason) {
+          throw new Error(`Invalid item at index ${index}: missing required fields`);
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
+          throw new Error(`Invalid date format at index ${index}`);
+        }
+        if (!['high', 'medium', 'low'].includes(item.relevance)) {
+          throw new Error(`Invalid relevance value at index ${index}`);
+        }
+      });
+      
       return parsedData;
     } catch (parseError) {
-      console.log('[OpenAI] Direct parse failed, attempting to extract JSON array');
+      console.error('[OpenAI] Direct parse failed:', parseError);
       
       // Second attempt: try to find JSON array in the content
       const jsonMatch = content.match(/\[\s*{[\s\S]*}\s*\]/);
