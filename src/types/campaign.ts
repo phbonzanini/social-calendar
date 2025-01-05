@@ -6,7 +6,7 @@ export interface Campaign {
   objetivo?: string;
   descricao?: string;
   data_comemorativa?: string;
-  id_user?: string; // Changed to string to match UUID type
+  id_user?: string; // Changed to string for UUID
   created_at?: string;
   is_from_commemorative?: boolean;
 }

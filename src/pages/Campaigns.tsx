@@ -30,7 +30,7 @@ const Campaigns = () => {
         .order("data_inicio", { ascending: true });
 
       if (error) throw error;
-      return data as unknown as Campaign[];
+      return data as Campaign[];
     },
   });
 
@@ -48,7 +48,7 @@ const Campaigns = () => {
         objetivo: values.objetivo || null,
         descricao: values.descricao || null,
         data_comemorativa: values.data_comemorativa || null,
-        id_user: session.session.user.id
+        id_user: session.session.user.id // This is now a UUID string
       };
 
       const { error } = await supabase
