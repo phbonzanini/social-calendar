@@ -25,7 +25,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert specialized in analyzing commemorative dates and their relevance to specific business niches. Return only a JSON array of relevant dates, with each date having the format { "date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation" }.' 
+            content: 'You are a marketing expert specialized in analyzing commemorative dates and their relevance to specific business niches. You MUST return ONLY a JSON array of dates in this exact format: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. Do not include any additional text or explanations outside the JSON array.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -48,7 +48,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     }
 
     const data = await response.json();
-    console.log('[OpenAI] Raw response:', data);
+    console.log('[OpenAI] Raw response:', JSON.stringify(data));
     
     if (!data.choices?.[0]?.message?.content) {
       throw new Error('Invalid response structure from OpenAI');
@@ -59,13 +59,21 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
 
     try {
       // Try to parse the entire response first
-      return JSON.parse(content);
+      const parsedData = JSON.parse(content);
+      if (!Array.isArray(parsedData)) {
+        throw new Error('Response is not an array');
+      }
+      return parsedData;
     } catch (parseError) {
       console.log('[OpenAI] Failed to parse entire response, trying to extract JSON array');
       // Try to extract JSON array from the response using regex
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsedData = JSON.parse(jsonMatch[0]);
+        if (!Array.isArray(parsedData)) {
+          throw new Error('Extracted data is not an array');
+        }
+        return parsedData;
       }
       throw new Error('Could not extract valid JSON from OpenAI response');
     }

@@ -1,19 +1,19 @@
 export function buildGPTPrompt(niches: string[], datesContent: string): string {
-  return `Analyze the following dates and return only those that are highly relevant to these business niches: ${niches.join(', ')}.
+  return `Analyze these dates and return ONLY those highly relevant to these business niches: ${niches.join(', ')}.
 
-Focus on dates that would be valuable for marketing campaigns in these sectors.
+Focus on dates valuable for marketing campaigns in these sectors.
 
 Dates to analyze:
 ${datesContent}
 
-Return your response as a JSON array of objects with this exact format:
+You MUST return ONLY a JSON array in this exact format:
 [
   {
     "date": "YYYY-MM-DD",
     "relevance": "high/medium/low",
-    "reason": "brief explanation of relevance"
+    "reason": "brief explanation"
   }
 ]
 
-Only include dates that are truly relevant to the specified niches. For healthcare/saúde e bem-estar, include dates related to health awareness, wellness, and medical commemorations.`;
+For healthcare/saúde e bem-estar, include dates related to health awareness, wellness, and medical commemorations. Do not include any text outside the JSON array.`;
 }
