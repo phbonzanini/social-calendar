@@ -38,9 +38,10 @@ export async function fetchDatesFromDB() {
 
 export function formatDatesForAnalysis(dates: any[]): DateAnalysis[] {
   return dates
-    .filter(date => date.data && date.descrição) // Only include dates with required fields
+    .filter(date => date.data && date.descrição)
     .map(date => ({
-      date: date.data,
+      // Ensure we keep the exact date from Supabase without timezone adjustments
+      date: date.data.split('T')[0],
       title: date.descrição,
       category: date.tipo?.toLowerCase() || 'commemorative'
     }));
@@ -52,7 +53,6 @@ export function parseRelevantDates(gptContent: string): any[] {
   } catch (firstError) {
     console.error('[dateUtils] First parse attempt failed:', firstError);
     
-    // Try to extract JSON from the response if it's wrapped in text
     const jsonMatch = gptContent.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
       try {
