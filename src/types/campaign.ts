@@ -6,7 +6,7 @@ export interface Campaign {
   objetivo?: string;
   descricao?: string;
   data_comemorativa?: string;
-  id_user?: string | null;
+  id_user?: string;
   created_at?: string;
   is_from_commemorative?: boolean;
 }

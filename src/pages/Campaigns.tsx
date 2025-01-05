@@ -9,7 +9,6 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { CampaignList } from "@/components/campaigns/CampaignList";
 import { CampaignForm } from "@/components/campaigns/CampaignForm";
 import { Campaign } from "@/types/campaign";
-import { useEffect } from "react";
 
 const Campaigns = () => {
   const location = useLocation();
@@ -34,57 +33,6 @@ const Campaigns = () => {
       return data as Campaign[];
     },
   });
-
-  useEffect(() => {
-    const createCampaignsFromDates = async () => {
-      if (selectedDates && selectedDates.length > 0) {
-        try {
-          const { data: session } = await supabase.auth.getSession();
-          if (!session.session?.user?.id) {
-            throw new Error("User not authenticated");
-          }
-
-          const existingDates = campaigns?.map(campaign => campaign.data_comemorativa) || [];
-          const newDates = selectedDates.filter(
-            (date: any) => !existingDates.includes(date.title)
-          );
-
-          if (newDates.length === 0) return;
-
-          const campaignsToCreate = newDates.map((date: any) => ({
-            nome: date.title,
-            data_inicio: date.date,
-            data_fim: date.date,
-            descricao: date.description,
-            data_comemorativa: date.title,
-            id_user: session.session.user.id
-          }));
-
-          const { error } = await supabase
-            .from("campanhas_marketing")
-            .insert(campaignsToCreate);
-
-          if (error) throw error;
-
-          toast({
-            title: "Campanhas criadas com sucesso!",
-            description: "Suas campanhas foram adicionadas ao calendário.",
-          });
-
-          refetch();
-        } catch (error) {
-          console.error("Erro ao criar campanhas:", error);
-          toast({
-            title: "Erro ao criar campanhas",
-            description: "Não foi possível criar as campanhas. Tente novamente.",
-            variant: "destructive",
-          });
-        }
-      }
-    };
-
-    createCampaignsFromDates();
-  }, [selectedDates, campaigns, toast, refetch]);
 
   const onSubmit = async (values: Omit<Campaign, "id">) => {
     try {
