@@ -1,68 +1,72 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { Database } from '../_shared/database.types';
+import { DateResponse } from './types';
 
-export interface DateAnalysis {
-  date: string;
-  title: string;
-  category: string;
-}
+type DateRecord = Database['public']['Tables']['datas_2025']['Row'];
 
-export async function fetchDatesFromDB() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+export const filterDatesForNiches = (dates: DateRecord[], niches: string[]): DateResponse[] => {
+  // First, let's identify general commemorative dates that should always be included
+  const generalDates = dates.filter(date => {
+    const description = date.descrição?.toLowerCase() || '';
+    return (
+      description.includes('dia das mães') ||
+      description.includes('dia dos pais') ||
+      description.includes('natal') ||
+      description.includes('ano novo') ||
+      description.includes('dia do cliente') ||
+      description.includes('black friday')
+    );
+  });
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing environment variables');
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseKey);
-  
-  console.log('[dateUtils] Fetching dates from datas_2025 table');
-  const { data: allDates, error: dbError } = await supabase
-    .from('datas_2025')
-    .select('*')
-    .order('data', { ascending: true });
-
-  if (dbError) {
-    console.error('[dateUtils] Database error:', dbError);
-    throw new Error(`Database error: ${dbError.message}`);
-  }
-
-  if (!allDates || allDates.length === 0) {
-    console.warn('[dateUtils] No dates found in database');
-  } else {
-    console.log(`[dateUtils] Found ${allDates.length} dates`);
-  }
-
-  return allDates || [];
-}
-
-export function formatDatesForAnalysis(dates: any[]): DateAnalysis[] {
-  return dates
-    .filter(date => date.data && date.descrição)
-    .map(date => ({
-      // Ensure we keep the exact date from Supabase without timezone adjustments
-      date: date.data.split('T')[0],
-      title: date.descrição,
-      category: date.tipo?.toLowerCase() || 'commemorative'
-    }));
-}
-
-export function parseRelevantDates(gptContent: string): any[] {
-  try {
-    return JSON.parse(gptContent);
-  } catch (firstError) {
-    console.error('[dateUtils] First parse attempt failed:', firstError);
+  // Then filter dates by niches
+  const nicheDates = dates.filter(date => {
+    if (!date['nicho 1'] && !date['nicho 2'] && !date['nicho 3']) return false;
     
-    const jsonMatch = gptContent.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      try {
-        return JSON.parse(jsonMatch[0]);
-      } catch (secondError) {
-        console.error('[dateUtils] Second parse attempt failed:', secondError);
-      }
-    }
-    
-    console.error('[dateUtils] GPT content was:', gptContent);
-    throw new Error('Failed to parse GPT response as JSON');
-  }
-}
+    return niches.some(niche => {
+      const nicheValue = niche.toLowerCase();
+      return (
+        (date['nicho 1']?.toLowerCase() === nicheValue) ||
+        (date['nicho 2']?.toLowerCase() === nicheValue) ||
+        (date['nicho 3']?.toLowerCase() === nicheValue)
+      );
+    });
+  });
+
+  // Combine general dates with niche-specific dates
+  const allDates = [...generalDates, ...nicheDates];
+
+  // Remove duplicates based on date
+  const uniqueDates = Array.from(new Set(allDates.map(date => 
+    JSON.stringify({ date: date.data, title: date.descrição })
+  ))).map(str => JSON.parse(str));
+
+  // Map to the expected format
+  return uniqueDates.map(({ date, title }) => {
+    const originalDate = allDates.find(d => 
+      d.data === date && d.descrição === title
+    );
+
+    return {
+      date: date || '',
+      title: title || '',
+      category: (originalDate?.tipo?.toLowerCase() as 'commemorative' | 'holiday' | 'optional') || 'commemorative',
+      description: title || '',
+    };
+  });
+};
+
+export const validateNiches = (niches: string[]): boolean => {
+  const validNiches = [
+    'educacao', 'education',
+    'moda', 'fashion',
+    'saude', 'healthcare',
+    'financas', 'finance',
+    'gastronomia', 'gastronomy',
+    'logistica', 'logistics',
+    'industria', 'industry',
+    'turismo', 'tourism'
+  ].map(n => n.toLowerCase());
+
+  return niches.every(niche => 
+    validNiches.includes(niche.toLowerCase())
+  );
+};
