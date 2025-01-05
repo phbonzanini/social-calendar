@@ -7,13 +7,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const RETRY_AFTER_MS = 2000; // Wait 2 seconds before retrying
+const RETRY_AFTER_MS = 3000; // Increased to 3 seconds
 const MAX_RETRIES = 3;
+const BACKOFF_MULTIPLIER = 1.5; // Each retry will wait longer
 
 async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any> {
   const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  const waitTime = RETRY_AFTER_MS * Math.pow(BACKOFF_MULTIPLIER, retryCount);
   
   try {
+    console.log(`[DEBUG] Attempt ${retryCount + 1}/${MAX_RETRIES} to call OpenAI API`);
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -25,29 +29,38 @@ async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any>
         messages: [
           {
             role: 'system',
-            content: 'You are a marketing expert that helps identify relevant commemorative dates for different business niches. Analyze the provided dates and determine their relevance for specific niches.'
+            content: 'You are a marketing expert. Return only a JSON array of relevant dates.'
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.7,
+        temperature: 0.5, // Reduced for more consistent outputs
       }),
     });
 
-    if (response.status === 429 && retryCount < MAX_RETRIES) {
-      console.log(`Rate limited, attempt ${retryCount + 1}/${MAX_RETRIES}. Waiting ${RETRY_AFTER_MS}ms...`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_AFTER_MS));
-      return callOpenAIWithRetry(prompt, retryCount + 1);
-    }
-
     if (!response.ok) {
+      console.error(`[ERROR] OpenAI API response status: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`[ERROR] OpenAI API error details:`, errorText);
+
+      if (response.status === 429 && retryCount < MAX_RETRIES) {
+        console.log(`[INFO] Rate limited, waiting ${waitTime}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        return callOpenAIWithRetry(prompt, retryCount + 1);
+      }
+
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log(`[DEBUG] Successfully received OpenAI API response`);
+    return data;
+
   } catch (error) {
+    console.error(`[ERROR] Error in OpenAI API call:`, error);
+    
     if (retryCount < MAX_RETRIES) {
-      console.log(`Error occurred, attempt ${retryCount + 1}/${MAX_RETRIES}. Retrying...`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_AFTER_MS));
+      console.log(`[INFO] Retrying after error, waiting ${waitTime}ms...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
       return callOpenAIWithRetry(prompt, retryCount + 1);
     }
     throw error;
@@ -99,7 +112,7 @@ serve(async (req) => {
 
     console.log(`[DEBUG] Found ${allDates.length} dates in database`);
 
-    // Format dates for GPT analysis
+    // Format dates for GPT analysis - simplified to reduce tokens
     const datesForAnalysis = allDates.map(date => ({
       date: date.data,
       title: date.descrição,
@@ -107,11 +120,8 @@ serve(async (req) => {
     }));
 
     const userPrompt = `Return a JSON array of dates from this list that are relevant for these niches: ${niches.join(', ')}.
-
-Available dates:
-${JSON.stringify(datesForAnalysis, null, 2)}
-
-Remember to return ONLY the JSON array, no other text.`;
+Dates: ${JSON.stringify(datesForAnalysis)}
+Return ONLY the JSON array, no other text.`;
 
     console.log("[DEBUG] Sending request to GPT");
 
@@ -131,6 +141,7 @@ Remember to return ONLY the JSON array, no other text.`;
       try {
         relevantDates = JSON.parse(gptContent);
       } catch (firstError) {
+        console.error('[ERROR] First parse attempt failed:', firstError);
         const jsonMatch = gptContent.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           relevantDates = JSON.parse(jsonMatch[0]);
