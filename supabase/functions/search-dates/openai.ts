@@ -1,6 +1,6 @@
 import { corsHeaders } from './cors.ts';
 
-const RETRY_DELAY = 2000; // 2 seconds
+const RETRY_DELAY = 2000;
 const MAX_RETRIES = 3;
 
 export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
@@ -25,11 +25,12 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert. Return ONLY a JSON array of dates. Each object in the array must have exactly these fields: date (YYYY-MM-DD), relevance (high/medium/low), and reason (brief text). Example: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. Do not include any other text or formatting.' 
+            content: 'You are a JSON-only response bot. You must return ONLY valid JSON arrays, no other text. Example format: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]' 
           },
           { role: 'user', content: prompt }
         ],
         temperature: 0,
+        response_format: { type: "json_object" },
         max_tokens: 1000,
       }),
     });
@@ -59,14 +60,20 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     console.log('[OpenAI] Content:', content);
 
     try {
-      // Extract JSON array using regex to handle any extra text
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (!jsonMatch) {
-        throw new Error('No JSON array found in response');
+      // First try to parse the content directly
+      let parsedData;
+      try {
+        parsedData = JSON.parse(content);
+      } catch (initialError) {
+        // If direct parsing fails, try to extract JSON array using regex
+        const jsonMatch = content.match(/\[\s*\{[^]*\}\s*\]/);
+        if (!jsonMatch) {
+          throw new Error('No valid JSON array found in response');
+        }
+        parsedData = JSON.parse(jsonMatch[0]);
       }
-      
-      const parsedData = JSON.parse(jsonMatch[0]);
-      console.log('[OpenAI] Successfully parsed JSON:', parsedData);
+
+      console.log('[OpenAI] Parsed data:', parsedData);
       
       if (!Array.isArray(parsedData)) {
         throw new Error('Response is not an array');
@@ -76,16 +83,16 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         throw new Error('Response array is empty');
       }
 
-      // Validate array items
+      // Validate each item in the array
       parsedData.forEach((item, index) => {
         if (!item.date || !item.relevance || !item.reason) {
           throw new Error(`Invalid item at index ${index}: missing required fields`);
         }
         if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
-          throw new Error(`Invalid date format at index ${index}`);
+          throw new Error(`Invalid date format at index ${index}: ${item.date}`);
         }
         if (!['high', 'medium', 'low'].includes(item.relevance)) {
-          throw new Error(`Invalid relevance value at index ${index}`);
+          throw new Error(`Invalid relevance value at index ${index}: ${item.relevance}`);
         }
       });
 
@@ -95,13 +102,13 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
       console.error('[OpenAI] Parse/validation error:', parseError);
       
       if (retryCount < MAX_RETRIES) {
-        console.log(`[OpenAI] Retrying with simplified prompt...`);
-        const simplifiedPrompt = `Return ONLY a JSON array of dates in this exact format: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. No other text. Dates to analyze: ${prompt}`;
+        console.log(`[OpenAI] Retrying with strict prompt...`);
+        const strictPrompt = `Return ONLY a JSON array in this exact format, with no additional text or formatting: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. Analyze these dates: ${prompt}`;
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return callOpenAI(simplifiedPrompt, retryCount + 1);
+        return callOpenAI(strictPrompt, retryCount + 1);
       }
       
-      throw new Error(`Failed to get valid JSON response after ${MAX_RETRIES} attempts`);
+      throw new Error(`Failed to get valid JSON response after ${MAX_RETRIES} attempts: ${parseError.message}`);
     }
   } catch (error) {
     console.error('[OpenAI] Error:', error);
