@@ -25,10 +25,21 @@ serve(async (req) => {
     const allDates = await fetchDatesFromDB();
     const datesForAnalysis = formatDatesForAnalysis(allDates);
     
-    // Simplified prompt to reduce token usage
-    const userPrompt = `Analyze these dates and return only those relevant for these niches: ${niches.join(', ')}.\nDates: ${JSON.stringify(datesForAnalysis)}`;
+    // Simplified prompt focused on filtering existing dates
+    const userPrompt = `
+    You are a date relevance analyzer. Review these dates and return ONLY those that are relevant for these business niches: ${niches.join(', ')}.
+    
+    Consider a date relevant if:
+    1. It directly relates to the niche
+    2. It represents a good marketing opportunity for the niche
+    3. It has cultural significance that could be leveraged by the niche
+    
+    Return the dates in this exact JSON format, maintaining the exact same date format:
+    [{ "date": "YYYY-MM-DD", "title": "Original title", "category": "Original category" }]
+    
+    Dates to analyze: ${JSON.stringify(datesForAnalysis)}`;
 
-    console.log('[search-dates] Calling OpenAI');
+    console.log('[search-dates] Calling OpenAI for date filtering');
     const gptData = await callOpenAI(userPrompt);
 
     if (!gptData.choices?.[0]?.message?.content) {
@@ -44,6 +55,7 @@ serve(async (req) => {
       throw new Error('GPT response is not an array');
     }
 
+    // Only return dates that exist in our database
     const formattedDates = relevantDates
       .filter(date => allDates.some(d => d.data === date.date))
       .map(date => {
@@ -59,7 +71,7 @@ serve(async (req) => {
       })
       .filter(Boolean);
 
-    console.log(`[search-dates] Returning ${formattedDates.length} dates`);
+    console.log(`[search-dates] Returning ${formattedDates.length} filtered dates`);
     
     return new Response(
       JSON.stringify({ dates: formattedDates }),

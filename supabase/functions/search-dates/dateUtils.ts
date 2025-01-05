@@ -15,37 +15,54 @@ export async function fetchDatesFromDB() {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  console.log('[dateUtils] Fetching dates from datas_2025 table');
   const { data: allDates, error: dbError } = await supabase
     .from('datas_2025')
-    .select('*');
+    .select('*')
+    .order('data', { ascending: true });
 
   if (dbError) {
-    console.error('[ERROR] Database error:', dbError);
+    console.error('[dateUtils] Database error:', dbError);
     throw new Error(`Database error: ${dbError.message}`);
+  }
+
+  if (!allDates || allDates.length === 0) {
+    console.warn('[dateUtils] No dates found in database');
+  } else {
+    console.log(`[dateUtils] Found ${allDates.length} dates`);
   }
 
   return allDates || [];
 }
 
 export function formatDatesForAnalysis(dates: any[]): DateAnalysis[] {
-  return dates.map(date => ({
-    date: date.data,
-    title: date.descrição,
-    category: date.tipo?.toLowerCase() || 'commemorative'
-  }));
+  return dates
+    .filter(date => date.data && date.descrição) // Only include dates with required fields
+    .map(date => ({
+      date: date.data,
+      title: date.descrição,
+      category: date.tipo?.toLowerCase() || 'commemorative'
+    }));
 }
 
 export function parseRelevantDates(gptContent: string): any[] {
   try {
     return JSON.parse(gptContent);
   } catch (firstError) {
-    console.error('[ERROR] First parse attempt failed:', firstError);
+    console.error('[dateUtils] First parse attempt failed:', firstError);
+    
+    // Try to extract JSON from the response if it's wrapped in text
     const jsonMatch = gptContent.match(/\[[\s\S]*\]/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (secondError) {
+        console.error('[dateUtils] Second parse attempt failed:', secondError);
+      }
     }
-    console.error('[ERROR] Failed to parse GPT content:', firstError);
-    console.error('[ERROR] GPT content was:', gptContent);
+    
+    console.error('[dateUtils] GPT content was:', gptContent);
     throw new Error('Failed to parse GPT response as JSON');
   }
 }
