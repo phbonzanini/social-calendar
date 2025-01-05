@@ -6,10 +6,7 @@ import { fetchDatesFromDB, formatDatesForAnalysis, parseRelevantDates } from './
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders
-    });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -20,11 +17,13 @@ serve(async (req) => {
       throw new Error('Niches array is required');
     }
 
+    console.log('[search-dates] Selected niches:', niches);
+
     console.log('[search-dates] Fetching dates from DB');
     const allDates = await fetchDatesFromDB();
     console.log(`[search-dates] Found ${allDates.length} total dates in DB`);
     
-    // First, pre-filter dates based on the niche columns
+    // Pre-filter dates based on the niche columns
     const preFilteredDates = allDates.filter(date => {
       const dateNiches = [
         date['nicho 1']?.toLowerCase(),
@@ -32,20 +31,12 @@ serve(async (req) => {
         date['nicho 3']?.toLowerCase()
       ].filter(Boolean);
 
-      console.log(`[search-dates] Date ${date.data} has niches:`, dateNiches);
-
-      const hasMatchingNiche = niches.some(niche => 
+      return niches.some(niche => 
         dateNiches.includes(niche.toLowerCase())
       );
-
-      if (hasMatchingNiche) {
-        console.log(`[search-dates] Date ${date.data} matches selected niches`);
-      }
-
-      return hasMatchingNiche;
     });
 
-    console.log(`[search-dates] Pre-filtered ${preFilteredDates.length} dates based on niche columns`);
+    console.log(`[search-dates] Pre-filtered to ${preFilteredDates.length} dates based on niche columns`);
     
     if (preFilteredDates.length === 0) {
       console.log('[search-dates] No dates found after pre-filtering, returning empty array');
@@ -56,38 +47,46 @@ serve(async (req) => {
     }
 
     const userPrompt = `
-    Você é um especialista EXTREMAMENTE RIGOROSO em marketing e análise de datas comemorativas.
-    
+    Você é um especialista em marketing e análise de datas comemorativas para os seguintes nichos específicos:
+    ${niches.join(', ')}
+
     CONTEXTO IMPORTANTE:
-    - As datas fornecidas já foram pré-filtradas do banco de dados com base nas colunas de nichos.
-    - Cada data pode ter até 3 nichos associados (nicho 1, nicho 2, nicho 3).
-    - Os nichos selecionados pelo usuário são: ${niches.join(', ')}.
-    
-    Sua tarefa é analisar as datas pré-filtradas e CONFIRMAR que elas têm uma conexão DIRETA, EXPLÍCITA e INEQUÍVOCA com os nichos selecionados.
+    - Existem 447 datas comemorativas cadastradas no banco de dados
+    - Cada data pode estar associada a até 3 nichos diferentes
+    - As datas fornecidas já foram pré-filtradas com base nas colunas de nichos do banco
+    - Você deve analisar ${preFilteredDates.length} datas pré-filtradas
 
-    CRITÉRIOS OBRIGATÓRIOS - uma data só deve ser incluída se TODOS estes critérios forem atendidos:
-    1. A data DEVE mencionar EXPLICITAMENTE uma profissão, atividade ou evento que é CENTRAL para o nicho
-       Exemplo válido: "Dia do Contador" para nicho de finanças
-       Exemplo inválido: "Dia da Criatividade" para nicho de design (muito genérico)
-    
-    2. A data DEVE ser específica do setor profissional do nicho
-       Exemplo válido: "Dia do Chef de Cozinha" para gastronomia
-       Exemplo inválido: "Dia do Trabalho" (muito genérico)
-    
-    3. A data DEVE oferecer uma oportunidade de marketing ÓBVIA e DIRETA para empresas do nicho
-       Exemplo válido: "Dia do Programador" para tecnologia
-       Exemplo inválido: "Dia da Internet" (muito amplo)
+    CRITÉRIOS DE ANÁLISE - uma data só deve ser incluída se atender TODOS estes critérios:
 
-    REGRAS ESTRITAS DE EXCLUSÃO - NÃO inclua datas que:
-    - Têm apenas uma conexão tangencial ou indireta com o nicho
-    - São datas genéricas ou que poderiam se aplicar a múltiplos nichos
-    - Não mencionam explicitamente uma profissão ou atividade do nicho
-    - Requerem interpretação subjetiva para relacionar ao nicho
+    1. RELEVÂNCIA DIRETA:
+       - A data DEVE ter uma conexão DIRETA e EXPLÍCITA com o nicho
+       - Exemplo válido para Gastronomia: "Dia do Chef de Cozinha"
+       - Exemplo inválido para Gastronomia: "Dia do Trabalhador"
 
-    Retorne as datas EXATAMENTE neste formato JSON, mantendo o formato de data original:
-    [{ "date": "YYYY-MM-DD", "title": "Título original", "category": "Categoria original" }]
+    2. POTENCIAL DE MARKETING:
+       - A data deve oferecer oportunidades claras de marketing para empresas do nicho
+       - Deve permitir ações promocionais ou comunicação relevante
+       - Exemplo válido para Educação: "Dia do Professor"
+       - Exemplo inválido para Educação: "Dia do Café"
 
-    Datas para análise: ${JSON.stringify(preFilteredDates)}`;
+    3. ESPECIFICIDADE DO NICHO:
+       - A data deve ser específica e relevante para o setor
+       - Não deve ser uma data genérica que poderia se aplicar a qualquer nicho
+       - Exemplo válido para Finanças: "Dia do Economista"
+       - Exemplo inválido para Finanças: "Dia da Gratidão"
+
+    REGRAS DE EXCLUSÃO - NÃO inclua datas que:
+    - Têm apenas conexão indireta ou tangencial com o nicho
+    - São genéricas demais
+    - Requerem interpretação forçada para relacionar ao nicho
+    - Não têm potencial claro de marketing para o nicho
+
+    Analise cuidadosamente estas datas e retorne APENAS as que têm uma conexão verdadeiramente relevante e significativa com os nichos selecionados:
+
+    ${JSON.stringify(preFilteredDates)}
+
+    Retorne as datas EXATAMENTE neste formato JSON:
+    [{ "date": "YYYY-MM-DD", "title": "Título original", "category": "Categoria original" }]`;
 
     console.log('[search-dates] Calling OpenAI for strict date filtering');
     const gptData = await callOpenAI(userPrompt);
@@ -101,10 +100,6 @@ serve(async (req) => {
     console.log('[search-dates] Raw GPT response:', gptContent);
     
     const relevantDates = parseRelevantDates(gptContent);
-    if (!Array.isArray(relevantDates)) {
-      throw new Error('GPT response is not an array');
-    }
-
     console.log(`[search-dates] GPT returned ${relevantDates.length} relevant dates`);
 
     // Final validation against Supabase data
@@ -132,7 +127,6 @@ serve(async (req) => {
           return false;
         }
 
-        console.log(`[search-dates] Accepting date: ${date.date} - ${originalDate.descrição}`);
         return true;
       })
       .map(date => {
@@ -148,7 +142,7 @@ serve(async (req) => {
       })
       .filter(Boolean);
 
-    console.log(`[search-dates] Final filtered dates (${formattedDates.length}):`, formattedDates);
+    console.log(`[search-dates] Final filtered dates count: ${formattedDates.length}`);
     
     return new Response(
       JSON.stringify({ dates: formattedDates }),
