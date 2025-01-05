@@ -22,13 +22,13 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: 'You are a marketing expert. Return only a JSON array of relevant dates.'
+          { 
+            role: 'system', 
+            content: 'You are a marketing expert specialized in analyzing commemorative dates and their relevance to specific business niches. Return only a JSON array of relevant dates.' 
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.5,
+        temperature: 0.3, // Lower temperature for more consistent results
       }),
     });
 

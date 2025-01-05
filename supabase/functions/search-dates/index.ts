@@ -31,8 +31,24 @@ serve(async (req) => {
         date['nicho 3']?.toLowerCase()
       ].filter(Boolean);
 
-      return niches.some(niche => 
-        dateNiches.includes(niche.toLowerCase())
+      // Map English niches to Portuguese for comparison
+      const nicheMapping: Record<string, string> = {
+        'education': 'educação',
+        'fashion': 'moda',
+        'healthcare': 'saúde e bem-estar',
+        'finance': 'finanças',
+        'gastronomy': 'gastronomia',
+        'logistics': 'logística',
+        'industry': 'indústria',
+        'tourism': 'turismo'
+      };
+
+      const translatedNiches = niches.map(niche => nicheMapping[niche] || niche);
+      
+      return translatedNiches.some(niche => 
+        dateNiches.some(dateNiche => 
+          dateNiche.includes(niche.toLowerCase())
+        )
       );
     });
 
@@ -105,7 +121,7 @@ serve(async (req) => {
     // Final validation against Supabase data
     const formattedDates = relevantDates
       .filter(date => {
-        const originalDate = allDates.find(d => d.data === date.date);
+        const originalDate = allDates.find(d => d.data?.split('T')[0] === date.date);
         if (!originalDate) {
           console.log(`[search-dates] Removing invalid date ${date.date} - not found in Supabase`);
           return false;
@@ -118,8 +134,24 @@ serve(async (req) => {
           originalDate['nicho 3']?.toLowerCase()
         ].filter(Boolean);
 
-        const hasMatchingNiche = niches.some(niche => 
-          dateNiches.includes(niche.toLowerCase())
+        // Map English niches to Portuguese for comparison
+        const nicheMapping: Record<string, string> = {
+          'education': 'educação',
+          'fashion': 'moda',
+          'healthcare': 'saúde e bem-estar',
+          'finance': 'finanças',
+          'gastronomy': 'gastronomia',
+          'logistics': 'logística',
+          'industry': 'indústria',
+          'tourism': 'turismo'
+        };
+
+        const translatedNiches = niches.map(niche => nicheMapping[niche] || niche);
+        
+        const hasMatchingNiche = translatedNiches.some(niche => 
+          dateNiches.some(dateNiche => 
+            dateNiche.includes(niche.toLowerCase())
+          )
         );
 
         if (!hasMatchingNiche) {
@@ -130,7 +162,7 @@ serve(async (req) => {
         return true;
       })
       .map(date => {
-        const originalDate = allDates.find(d => d.data === date.date);
+        const originalDate = allDates.find(d => d.data?.split('T')[0] === date.date);
         if (!originalDate) return null;
         
         return {
