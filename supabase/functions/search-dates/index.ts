@@ -25,17 +25,19 @@ serve(async (req) => {
     const datesForAnalysis = formatDatesForAnalysis(allDates);
     
     const userPrompt = `
-    Você é um especialista em marketing e análise de datas comemorativas. Analise cuidadosamente as datas fornecidas e retorne APENAS aquelas que têm uma conexão DIRETA e RELEVANTE com os seguintes nichos de mercado: ${niches.join(', ')}.
+    Você é um especialista em marketing e análise de datas comemorativas. Analise RIGOROSAMENTE as datas fornecidas e retorne APENAS aquelas que têm uma conexão DIRETA, CLARA e MUITO RELEVANTE com os seguintes nichos de mercado: ${niches.join(', ')}.
 
-    Uma data é considerada relevante SOMENTE se atender a pelo menos um destes critérios:
-    1. Tem relação DIRETA com o nicho (ex: "Dia do Programador" para nicho de tecnologia)
-    2. É uma data específica do setor ou profissão relacionada ao nicho
+    Uma data é considerada relevante SOMENTE se atender a TODOS estes critérios:
+    1. Tem relação DIRETA e ÓBVIA com o nicho (ex: "Dia do Chef de Cozinha" para nicho de gastronomia)
+    2. É uma data específica da profissão ou setor relacionado ao nicho
     3. Representa uma oportunidade de marketing CLARA e DIRETA para o nicho
 
-    NÃO inclua datas que:
-    - Têm apenas conexão indireta ou vaga com o nicho
-    - São datas genéricas que poderiam se aplicar a qualquer nicho
-    - Não oferecem uma oportunidade clara de marketing para o nicho específico
+    IMPORTANTE:
+    - Seja MUITO RIGOROSO na seleção
+    - NÃO inclua datas com conexão indireta ou vaga
+    - NÃO inclua datas genéricas que poderiam se aplicar a vários nichos
+    - NÃO inclua datas que não tenham relação ÓBVIA com o nicho
+    - APENAS retorne datas que existem na lista fornecida, NÃO CRIE novas datas
 
     Retorne as datas EXATAMENTE neste formato JSON, mantendo o formato de data original:
     [{ "date": "YYYY-MM-DD", "title": "Título original", "category": "Categoria original" }]
@@ -51,15 +53,22 @@ serve(async (req) => {
     }
 
     const gptContent = gptData.choices[0].message.content.trim();
-    console.log('[search-dates] Processing GPT response');
+    console.log('[search-dates] Processing GPT response:', gptContent);
     
     const relevantDates = parseRelevantDates(gptContent);
     if (!Array.isArray(relevantDates)) {
       throw new Error('GPT response is not an array');
     }
 
+    // Strict validation to ensure dates exist in Supabase
     const formattedDates = relevantDates
-      .filter(date => allDates.some(d => d.data === date.date))
+      .filter(date => {
+        const exists = allDates.some(d => d.data === date.date);
+        if (!exists) {
+          console.log(`[search-dates] Removing date ${date.date} as it doesn't exist in Supabase`);
+        }
+        return exists;
+      })
       .map(date => {
         const originalDate = allDates.find(d => d.data === date.date);
         if (!originalDate) return null;
@@ -73,7 +82,7 @@ serve(async (req) => {
       })
       .filter(Boolean);
 
-    console.log(`[search-dates] Returning ${formattedDates.length} strictly filtered dates`);
+    console.log(`[search-dates] Returning ${formattedDates.length} strictly filtered dates:`, formattedDates);
     
     return new Response(
       JSON.stringify({ dates: formattedDates }),
