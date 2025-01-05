@@ -20,6 +20,11 @@ const Campaigns = () => {
   const { data: campaigns, isLoading, refetch } = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user?.id) {
+        throw new Error("User not authenticated");
+      }
+
       const { data, error } = await supabase
         .from("campanhas_marketing")
         .select("*")
@@ -36,7 +41,10 @@ const Campaigns = () => {
       if (selectedDates && selectedDates.length > 0) {
         try {
           const { data: session } = await supabase.auth.getSession();
-          
+          if (!session.session?.user?.id) {
+            throw new Error("User not authenticated");
+          }
+
           // Filter out dates that already have campaigns
           const existingDates = campaigns?.map(campaign => campaign.data_comemorativa) || [];
           const newDates = selectedDates.filter(
@@ -51,7 +59,7 @@ const Campaigns = () => {
             data_fim: date.date,
             descricao: date.description,
             data_comemorativa: date.title,
-            id_user: session?.session?.user?.id ? Number(session.session.user.id) : null
+            id_user: session.session.user.id
           }));
 
           const { error } = await supabase
@@ -83,7 +91,10 @@ const Campaigns = () => {
   const onSubmit = async (values: Omit<Campaign, "id">) => {
     try {
       const { data: session } = await supabase.auth.getSession();
-      
+      if (!session.session?.user?.id) {
+        throw new Error("User not authenticated");
+      }
+
       const campaignData = {
         nome: values.nome,
         data_inicio: values.data_inicio,
@@ -91,7 +102,7 @@ const Campaigns = () => {
         objetivo: values.objetivo || null,
         descricao: values.descricao || null,
         data_comemorativa: values.data_comemorativa || null,
-        id_user: session?.session?.user?.id ? Number(session.session.user.id) : null
+        id_user: session.session.user.id
       };
 
       const { error } = await supabase

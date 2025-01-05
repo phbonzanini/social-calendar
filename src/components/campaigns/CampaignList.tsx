@@ -1,24 +1,11 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Loader2 } from "lucide-react";
 import { Campaign } from "@/types/campaign";
-import { Loader2, Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useState } from "react";
-import { CampaignForm } from "./CampaignForm";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CampaignCard } from "./CampaignCard";
+import { EditCampaignDialog } from "./EditCampaignDialog";
+import { DeleteCampaignDialog } from "./DeleteCampaignDialog";
 
 interface CampaignListProps {
   campaigns: Campaign[] | undefined;
@@ -113,104 +100,38 @@ export const CampaignList = ({ campaigns, isLoading }: CampaignListProps) => {
     <>
       <div className="grid gap-4 md:grid-cols-2">
         {campaigns.map((campaign) => (
-          <Card key={campaign.id} className="bg-neutral-light/50 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xl font-bold">{campaign.nome}</CardTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setSelectedCampaign(campaign);
-                    setIsEditDialogOpen(true);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setSelectedCampaign(campaign);
-                    setIsDeleteDialogOpen(true);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Período: {format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR })} -{" "}
-                  {format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR })}
-                </p>
-                {campaign.objetivo && (
-                  <p className="text-sm">
-                    <strong>Objetivo:</strong> {campaign.objetivo}
-                  </p>
-                )}
-                {campaign.descricao && (
-                  <p className="text-sm">
-                    <strong>Descrição:</strong> {campaign.descricao}
-                  </p>
-                )}
-                {campaign.data_comemorativa && (
-                  <p className="text-sm">
-                    <strong>Data Comemorativa:</strong> {campaign.data_comemorativa}
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <CampaignCard
+            key={campaign.id}
+            campaign={campaign}
+            onEdit={(campaign) => {
+              setSelectedCampaign(campaign);
+              setIsEditDialogOpen(true);
+            }}
+            onDelete={(campaign) => {
+              setSelectedCampaign(campaign);
+              setIsDeleteDialogOpen(true);
+            }}
+          />
         ))}
       </div>
 
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Campanha</DialogTitle>
-          </DialogHeader>
-          {selectedCampaign && (
-            <CampaignForm
-              onSubmit={handleEdit}
-              defaultValues={{
-                nome: selectedCampaign.nome,
-                data_inicio: selectedCampaign.data_inicio,
-                data_fim: selectedCampaign.data_fim,
-                objetivo: selectedCampaign.objetivo || "",
-                descricao: selectedCampaign.descricao || "",
-                data_comemorativa: selectedCampaign.data_comemorativa || "",
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <EditCampaignDialog
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        campaign={selectedCampaign}
+        onSubmit={handleEdit}
+      />
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta campanha? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                if (selectedCampaign) {
-                  handleDelete(selectedCampaign.id);
-                  setIsDeleteDialogOpen(false);
-                }
-              }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteCampaignDialog
+        isOpen={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={() => {
+          if (selectedCampaign) {
+            handleDelete(selectedCampaign.id);
+            setIsDeleteDialogOpen(false);
+          }
+        }}
+      />
     </>
   );
 };
