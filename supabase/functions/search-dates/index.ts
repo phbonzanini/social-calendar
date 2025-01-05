@@ -1,7 +1,58 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import { corsHeaders } from '../_shared/cors.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+const RETRY_AFTER_MS = 2000; // Wait 2 seconds before retrying
+const MAX_RETRIES = 3;
+
+async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any> {
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a marketing expert that helps identify relevant commemorative dates for different business niches. Analyze the provided dates and determine their relevance for specific niches.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (response.status === 429 && retryCount < MAX_RETRIES) {
+      console.log(`Rate limited, attempt ${retryCount + 1}/${MAX_RETRIES}. Waiting ${RETRY_AFTER_MS}ms...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_AFTER_MS));
+      return callOpenAIWithRetry(prompt, retryCount + 1);
+    }
+
+    if (!response.ok) {
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    if (retryCount < MAX_RETRIES) {
+      console.log(`Error occurred, attempt ${retryCount + 1}/${MAX_RETRIES}. Retrying...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_AFTER_MS));
+      return callOpenAIWithRetry(prompt, retryCount + 1);
+    }
+    throw error;
+  }
+}
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -19,9 +70,8 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
-    if (!supabaseUrl || !supabaseKey || !openAIApiKey) {
+    if (!supabaseUrl || !supabaseKey) {
       console.error("[ERROR] Missing environment variables");
       throw new Error('Missing environment variables');
     }
@@ -56,16 +106,6 @@ serve(async (req) => {
       category: date.tipo?.toLowerCase() || 'commemorative'
     }));
 
-    const systemPrompt = `You are a marketing expert that helps identify relevant commemorative dates for different business niches. Analyze the provided dates and determine their relevance for specific niches. You must return ONLY a JSON array containing the relevant dates, with no additional text or explanation.
-
-Each date in the array must follow this exact format:
-{
-  "date": "YYYY-MM-DD",
-  "title": "string",
-  "category": "commemorative" | "holiday" | "optional",
-  "description": "string"
-}`;
-
     const userPrompt = `Return a JSON array of dates from this list that are relevant for these niches: ${niches.join(', ')}.
 
 Available dates:
@@ -75,29 +115,7 @@ Remember to return ONLY the JSON array, no other text.`;
 
     console.log("[DEBUG] Sending request to GPT");
 
-    const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-0125-preview',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.7,
-      }),
-    });
-
-    if (!gptResponse.ok) {
-      const errorText = await gptResponse.text();
-      console.error('[ERROR] GPT API error:', errorText);
-      throw new Error(`OpenAI API error: ${gptResponse.status}`);
-    }
-
-    const gptData = await gptResponse.json();
+    const gptData = await callOpenAIWithRetry(userPrompt);
     console.log("[DEBUG] Received GPT response");
 
     if (!gptData.choices?.[0]?.message?.content) {
