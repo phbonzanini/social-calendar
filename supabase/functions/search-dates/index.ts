@@ -24,10 +24,30 @@ serve(async (req) => {
     const allDates = await fetchDatesFromDB();
     const datesForAnalysis = formatDatesForAnalysis(allDates);
     
+    // First, pre-filter dates based on the niche columns
+    const preFilteredDates = allDates.filter(date => {
+      const dateNiches = [
+        date['nicho 1']?.toLowerCase(),
+        date['nicho 2']?.toLowerCase(),
+        date['nicho 3']?.toLowerCase()
+      ].filter(Boolean);
+
+      return niches.some(niche => 
+        dateNiches.includes(niche.toLowerCase())
+      );
+    });
+
+    console.log(`[search-dates] Pre-filtered ${preFilteredDates.length} dates based on niche columns`);
+    
     const userPrompt = `
     Você é um especialista EXTREMAMENTE RIGOROSO em marketing e análise de datas comemorativas.
     
-    Sua tarefa é analisar as datas fornecidas e retornar EXCLUSIVAMENTE aquelas que têm uma conexão DIRETA, EXPLÍCITA e INEQUÍVOCA com os seguintes nichos de mercado: ${niches.join(', ')}.
+    CONTEXTO IMPORTANTE:
+    - As datas fornecidas já foram pré-filtradas do banco de dados com base nas colunas de nichos.
+    - Cada data pode ter até 3 nichos associados (nicho 1, nicho 2, nicho 3).
+    - Os nichos selecionados pelo usuário são: ${niches.join(', ')}.
+    
+    Sua tarefa é analisar as datas pré-filtradas e CONFIRMAR que elas têm uma conexão DIRETA, EXPLÍCITA e INEQUÍVOCA com os nichos selecionados.
 
     CRITÉRIOS OBRIGATÓRIOS - uma data só deve ser incluída se TODOS estes critérios forem atendidos:
     1. A data DEVE mencionar EXPLICITAMENTE uma profissão, atividade ou evento que é CENTRAL para o nicho
@@ -46,13 +66,12 @@ serve(async (req) => {
     - Têm apenas uma conexão tangencial ou indireta com o nicho
     - São datas genéricas ou que poderiam se aplicar a múltiplos nichos
     - Não mencionam explicitamente uma profissão ou atividade do nicho
-    - Não existem na lista fornecida (NÃO CRIE novas datas)
     - Requerem interpretação subjetiva para relacionar ao nicho
 
     Retorne as datas EXATAMENTE neste formato JSON, mantendo o formato de data original:
     [{ "date": "YYYY-MM-DD", "title": "Título original", "category": "Categoria original" }]
 
-    Datas para análise: ${JSON.stringify(datesForAnalysis)}`;
+    Datas para análise: ${JSON.stringify(preFilteredDates)}`;
 
     console.log('[search-dates] Calling OpenAI for strict date filtering');
     const gptData = await callOpenAI(userPrompt);
@@ -70,20 +89,31 @@ serve(async (req) => {
       throw new Error('GPT response is not an array');
     }
 
-    // Validate each date against Supabase data
+    // Final validation against Supabase data
     const formattedDates = relevantDates
       .filter(date => {
-        const exists = allDates.some(d => d.data === date.date);
-        if (!exists) {
+        const originalDate = allDates.find(d => d.data === date.date);
+        if (!originalDate) {
           console.log(`[search-dates] Removing invalid date ${date.date} - not found in Supabase`);
           return false;
         }
 
-        // Additional validation to ensure the date is truly relevant
-        const originalDate = allDates.find(d => d.data === date.date);
-        if (!originalDate) return false;
+        // Verify that the date actually has one of the selected niches
+        const dateNiches = [
+          originalDate['nicho 1']?.toLowerCase(),
+          originalDate['nicho 2']?.toLowerCase(),
+          originalDate['nicho 3']?.toLowerCase()
+        ].filter(Boolean);
 
-        // Log each accepted date for debugging
+        const hasMatchingNiche = niches.some(niche => 
+          dateNiches.includes(niche.toLowerCase())
+        );
+
+        if (!hasMatchingNiche) {
+          console.log(`[search-dates] Removing date ${date.date} - no matching niches`);
+          return false;
+        }
+
         console.log(`[search-dates] Accepting date: ${date.date} - ${originalDate.descrição}`);
         return true;
       })
