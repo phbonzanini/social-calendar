@@ -19,6 +19,7 @@ Rules:
 4. Relevance must be: high, medium, or low
 5. Reason must be brief and clear
 6. Include health awareness dates for healthcare/saúde e bem-estar niche
+7. Response must be valid JSON with no trailing commas
 
 Dates to analyze:
 ${datesContent}`;

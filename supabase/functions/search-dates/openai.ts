@@ -25,7 +25,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a JSON-only response bot. You must return ONLY a JSON object with a dates array containing objects with date, relevance, and reason fields.' 
+            content: 'You are a JSON-only response bot. You must return ONLY a JSON object with a dates array containing objects with date, relevance, and reason fields. Example: {"dates":[{"date":"2025-01-01","relevance":"high","reason":"New Year"}]}' 
           },
           { role: 'user', content: prompt }
         ],
@@ -59,56 +59,46 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     const content = data.choices[0].message.content.trim();
     console.log('[OpenAI] Content:', content);
 
+    let parsedData;
     try {
-      let parsedData;
-      try {
-        parsedData = JSON.parse(content);
-      } catch (initialError) {
-        console.error('[OpenAI] Initial parse error:', initialError);
-        throw new Error('Failed to parse OpenAI response as JSON');
-      }
-
-      // Ensure we have a dates array
-      if (!parsedData?.dates || !Array.isArray(parsedData.dates)) {
-        console.error('[OpenAI] Response missing dates array:', parsedData);
-        throw new Error('Response missing dates array');
-      }
-
-      // Validate each item in the dates array
-      parsedData.dates.forEach((item: any, index: number) => {
-        if (!item.date || !item.relevance || !item.reason) {
-          throw new Error(`Invalid item at index ${index}: missing required fields`);
-        }
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
-          throw new Error(`Invalid date format at index ${index}: ${item.date}`);
-        }
-        if (!['high', 'medium', 'low'].includes(item.relevance)) {
-          throw new Error(`Invalid relevance value at index ${index}: ${item.relevance}`);
-        }
-      });
-
-      console.log('[OpenAI] Successfully validated response:', parsedData.dates);
-      return parsedData.dates;
-      
-    } catch (parseError) {
-      console.error('[OpenAI] Parse/validation error:', parseError);
-      
-      if (retryCount < MAX_RETRIES) {
-        console.log(`[OpenAI] Retrying with strict prompt...`);
-        const strictPrompt = `Return a JSON object with a dates array containing objects with exactly these fields: date (YYYY-MM-DD), relevance (high/medium/low), and reason (string). Example: {"dates":[{"date":"2025-01-01","relevance":"high","reason":"New Year"}]}. Original prompt: ${prompt}`;
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return callOpenAI(strictPrompt, retryCount + 1);
-      }
-      
-      throw parseError;
+      parsedData = JSON.parse(content);
+    } catch (error) {
+      console.error('[OpenAI] Parse error:', error);
+      throw new Error('Failed to parse OpenAI response as JSON');
     }
+
+    // Validate response structure
+    if (!parsedData?.dates || !Array.isArray(parsedData.dates)) {
+      console.error('[OpenAI] Invalid response structure:', parsedData);
+      throw new Error('Invalid response structure: missing dates array');
+    }
+
+    // Validate each date object
+    parsedData.dates.forEach((item: any, index: number) => {
+      if (!item.date || !item.relevance || !item.reason) {
+        throw new Error(`Invalid date object at index ${index}: missing required fields`);
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(item.date)) {
+        throw new Error(`Invalid date format at index ${index}: ${item.date}`);
+      }
+      if (!['high', 'medium', 'low'].includes(item.relevance)) {
+        throw new Error(`Invalid relevance value at index ${index}: ${item.relevance}`);
+      }
+    });
+
+    console.log('[OpenAI] Successfully validated response:', parsedData.dates);
+    return parsedData.dates;
+
   } catch (error) {
     console.error('[OpenAI] Error:', error);
+    
     if (retryCount < MAX_RETRIES) {
-      console.log(`[OpenAI] Error occurred. Retrying in ${RETRY_DELAY}ms...`);
+      console.log(`[OpenAI] Retrying with simplified prompt...`);
+      const simplifiedPrompt = `Return a JSON object with a dates array. Each date must have date (YYYY-MM-DD), relevance (high/medium/low), and reason. Example: {"dates":[{"date":"2025-01-01","relevance":"high","reason":"New Year"}]}. Original prompt: ${prompt}`;
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return callOpenAI(prompt, retryCount + 1);
+      return callOpenAI(simplifiedPrompt, retryCount + 1);
     }
+    
     throw error;
   }
 }
