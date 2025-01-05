@@ -1,43 +1,69 @@
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
-import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
 import { toast } from "sonner";
-import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    name: "",
+    phone: "",
+  });
 
-  useEffect(() => {
-    // Check if user is already logged in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/select-niche");
-      }
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
     });
+  };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: string, session: Session | null) => {
-        switch (event) {
-          case 'SIGNED_UP':
-            toast.success('Conta criada com sucesso! Por favor, faça login.');
-            navigate("/login");
-            break;
-          case 'SIGNED_IN':
-            if (session) {
-              toast.success('Login realizado com sucesso!');
-              navigate("/select-niche");
-            }
-            break;
-        }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    try {
+      // Validate passwords match
+      if (formData.password !== formData.confirmPassword) {
+        toast.error("As senhas não coincidem");
+        return;
       }
-    );
 
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+      // Validate password length
+      if (formData.password.length < 6) {
+        toast.error("A senha deve ter pelo menos 6 caracteres");
+        return;
+      }
+
+      // Sign up the user
+      const { error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.name,
+            phone: formData.phone,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Conta criada com sucesso! Por favor, faça login.");
+      navigate("/login");
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-light via-white to-neutral-light p-6">
@@ -49,46 +75,75 @@ const SignUp = () => {
           <h2 className="text-2xl font-semibold text-center mb-6">
             Criar uma conta
           </h2>
-          <Auth
-            supabaseClient={supabase}
-            view="sign_up"
-            appearance={{
-              theme: ThemeSupa,
-              variables: {
-                default: {
-                  colors: {
-                    brand: '#9b87f5',
-                    brandAccent: '#7d66f2',
-                  },
-                },
-              },
-              style: {
-                input: {
-                  borderRadius: '0.375rem',
-                },
-                message: {
-                  borderRadius: '0.375rem',
-                  backgroundColor: '#fee2e2',
-                  color: '#991b1b',
-                  padding: '0.75rem',
-                  marginBottom: '1rem',
-                },
-              },
-            }}
-            providers={[]}
-            localization={{
-              variables: {
-                sign_up: {
-                  email_label: 'Email',
-                  password_label: 'Senha',
-                  password_input_placeholder: 'Senha (mínimo 6 caracteres)',
-                  button_label: 'Cadastrar',
-                  loading_button_label: 'Cadastrando...',
-                  email_input_placeholder: 'Seu endereço de email',
-                },
-              },
-            }}
-          />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome completo</Label>
+              <Input
+                id="name"
+                name="name"
+                type="text"
+                required
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Seu nome completo"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="seu@email.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone</Label>
+              <Input
+                id="phone"
+                name="phone"
+                type="tel"
+                required
+                value={formData.phone}
+                onChange={handleChange}
+                placeholder="(00) 00000-0000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar senha</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Digite a senha novamente"
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? "Criando conta..." : "Criar conta"}
+            </Button>
+          </form>
           <div className="mt-4 text-center">
             <p className="text-sm text-gray-600 mb-2">Já tem uma conta?</p>
             <Button
