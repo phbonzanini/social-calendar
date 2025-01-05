@@ -52,6 +52,20 @@ export const NicheSelector = () => {
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-sm">
+      <div className="space-y-2">
+        <h2 className="text-2xl font-bold text-neutral-dark">Datas Sazonais</h2>
+        <p className="text-sm text-muted-foreground">
+          Além das datas específicas para cada nicho, você terá acesso a datas comemorativas gerais como:
+        </p>
+        <ul className="text-sm text-muted-foreground list-disc list-inside ml-2">
+          <li>Dia das Mães</li>
+          <li>Dia dos Pais</li>
+          <li>Natal e Ano Novo</li>
+          <li>Dia do Cliente</li>
+          <li>Black Friday</li>
+        </ul>
+      </div>
+
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
