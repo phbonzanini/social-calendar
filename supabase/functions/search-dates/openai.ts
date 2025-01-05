@@ -25,7 +25,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a JSON-only response bot. You must return ONLY valid JSON arrays, no other text.' 
+            content: 'You are a JSON-only response bot. You must return ONLY a JSON array containing objects with date, relevance, and reason fields.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -60,11 +60,11 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     console.log('[OpenAI] Content:', content);
 
     try {
-      // First try to parse the content directly
       let parsedData;
       try {
         parsedData = JSON.parse(content);
       } catch (initialError) {
+        console.error('[OpenAI] Initial parse error:', initialError);
         // If direct parsing fails, try to extract JSON array using regex
         const jsonMatch = content.match(/\[\s*\{[^]*\}\s*\]/);
         if (!jsonMatch) {
@@ -73,8 +73,14 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         parsedData = JSON.parse(jsonMatch[0]);
       }
 
+      // If parsedData is an object with a "dates" property, use that
+      if (parsedData && typeof parsedData === 'object' && Array.isArray(parsedData.dates)) {
+        parsedData = parsedData.dates;
+      }
+
       // Ensure we have an array
       if (!Array.isArray(parsedData)) {
+        console.error('[OpenAI] Parsed data is not an array:', parsedData);
         throw new Error('Response is not an array');
       }
 
@@ -96,6 +102,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         }
       });
 
+      console.log('[OpenAI] Successfully validated response:', parsedData);
       return parsedData;
       
     } catch (parseError) {
@@ -103,7 +110,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
       
       if (retryCount < MAX_RETRIES) {
         console.log(`[OpenAI] Retrying with strict prompt...`);
-        const strictPrompt = `Return ONLY a JSON array in this exact format, with no additional text: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. Analyze these dates: ${prompt}`;
+        const strictPrompt = `Return a JSON array containing ONLY objects with exactly these fields: date (YYYY-MM-DD), relevance (high/medium/low), and reason (string). Example: {"dates":[{"date":"2025-01-01","relevance":"high","reason":"New Year"}]}. Analyze: ${prompt}`;
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         return callOpenAI(strictPrompt, retryCount + 1);
       }
