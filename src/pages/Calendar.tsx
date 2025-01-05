@@ -108,7 +108,7 @@ const Calendar = () => {
               <Button
                 onClick={handleContinue}
                 size="lg"
-                className="px-8"
+                className="px-8 text-white"
               >
                 Continuar para Campanhas
               </Button>
