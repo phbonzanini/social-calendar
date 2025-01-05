@@ -31,7 +31,7 @@ const FinalCalendar = () => {
         index === self.findIndex((c) => c.id === campaign.id)
       );
 
-      return uniqueCampaigns as Campaign[];
+      return uniqueCampaigns as unknown as Campaign[];
     },
   });
 

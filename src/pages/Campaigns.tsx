@@ -30,7 +30,7 @@ const Campaigns = () => {
         .order("data_inicio", { ascending: true });
 
       if (error) throw error;
-      return data as Campaign[];
+      return data as unknown as Campaign[];
     },
   });
 
