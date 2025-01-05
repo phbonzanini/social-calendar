@@ -5,7 +5,6 @@ import { callOpenAI } from './openai.ts';
 import { fetchDatesFromDB, formatDatesForAnalysis, parseRelevantDates } from './dateUtils.ts';
 
 serve(async (req) => {
-  // CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -25,21 +24,25 @@ serve(async (req) => {
     const allDates = await fetchDatesFromDB();
     const datesForAnalysis = formatDatesForAnalysis(allDates);
     
-    // Simplified prompt focused on filtering existing dates
     const userPrompt = `
-    You are a date relevance analyzer. Review these dates and return ONLY those that are relevant for these business niches: ${niches.join(', ')}.
-    
-    Consider a date relevant if:
-    1. It directly relates to the niche
-    2. It represents a good marketing opportunity for the niche
-    3. It has cultural significance that could be leveraged by the niche
-    
-    Return the dates in this exact JSON format, maintaining the exact same date format:
-    [{ "date": "YYYY-MM-DD", "title": "Original title", "category": "Original category" }]
-    
-    Dates to analyze: ${JSON.stringify(datesForAnalysis)}`;
+    Você é um especialista em marketing e análise de datas comemorativas. Analise cuidadosamente as datas fornecidas e retorne APENAS aquelas que têm uma conexão DIRETA e RELEVANTE com os seguintes nichos de mercado: ${niches.join(', ')}.
 
-    console.log('[search-dates] Calling OpenAI for date filtering');
+    Uma data é considerada relevante SOMENTE se atender a pelo menos um destes critérios:
+    1. Tem relação DIRETA com o nicho (ex: "Dia do Programador" para nicho de tecnologia)
+    2. É uma data específica do setor ou profissão relacionada ao nicho
+    3. Representa uma oportunidade de marketing CLARA e DIRETA para o nicho
+
+    NÃO inclua datas que:
+    - Têm apenas conexão indireta ou vaga com o nicho
+    - São datas genéricas que poderiam se aplicar a qualquer nicho
+    - Não oferecem uma oportunidade clara de marketing para o nicho específico
+
+    Retorne as datas EXATAMENTE neste formato JSON, mantendo o formato de data original:
+    [{ "date": "YYYY-MM-DD", "title": "Título original", "category": "Categoria original" }]
+
+    Datas para análise: ${JSON.stringify(datesForAnalysis)}`;
+
+    console.log('[search-dates] Calling OpenAI for strict date filtering');
     const gptData = await callOpenAI(userPrompt);
 
     if (!gptData.choices?.[0]?.message?.content) {
@@ -55,7 +58,6 @@ serve(async (req) => {
       throw new Error('GPT response is not an array');
     }
 
-    // Only return dates that exist in our database
     const formattedDates = relevantDates
       .filter(date => allDates.some(d => d.data === date.date))
       .map(date => {
@@ -71,7 +73,7 @@ serve(async (req) => {
       })
       .filter(Boolean);
 
-    console.log(`[search-dates] Returning ${formattedDates.length} filtered dates`);
+    console.log(`[search-dates] Returning ${formattedDates.length} strictly filtered dates`);
     
     return new Response(
       JSON.stringify({ dates: formattedDates }),
