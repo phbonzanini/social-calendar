@@ -22,7 +22,7 @@ serve(async (req) => {
 
     console.log('[search-dates] Fetching dates from DB');
     const allDates = await fetchDatesFromDB();
-    const datesForAnalysis = formatDatesForAnalysis(allDates);
+    console.log(`[search-dates] Found ${allDates.length} total dates in DB`);
     
     // First, pre-filter dates based on the niche columns
     const preFilteredDates = allDates.filter(date => {
@@ -32,13 +32,29 @@ serve(async (req) => {
         date['nicho 3']?.toLowerCase()
       ].filter(Boolean);
 
-      return niches.some(niche => 
+      console.log(`[search-dates] Date ${date.data} has niches:`, dateNiches);
+
+      const hasMatchingNiche = niches.some(niche => 
         dateNiches.includes(niche.toLowerCase())
       );
+
+      if (hasMatchingNiche) {
+        console.log(`[search-dates] Date ${date.data} matches selected niches`);
+      }
+
+      return hasMatchingNiche;
     });
 
     console.log(`[search-dates] Pre-filtered ${preFilteredDates.length} dates based on niche columns`);
     
+    if (preFilteredDates.length === 0) {
+      console.log('[search-dates] No dates found after pre-filtering, returning empty array');
+      return new Response(
+        JSON.stringify({ dates: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const userPrompt = `
     Você é um especialista EXTREMAMENTE RIGOROSO em marketing e análise de datas comemorativas.
     
@@ -88,6 +104,8 @@ serve(async (req) => {
     if (!Array.isArray(relevantDates)) {
       throw new Error('GPT response is not an array');
     }
+
+    console.log(`[search-dates] GPT returned ${relevantDates.length} relevant dates`);
 
     // Final validation against Supabase data
     const formattedDates = relevantDates
