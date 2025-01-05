@@ -1,5 +1,5 @@
 export function buildGPTPrompt(niches: string[], datesContent: string): string {
-  return `Analyze these dates for niches: ${niches.join(', ')} and return a JSON object with a "dates" array containing relevant dates.
+  return `Analyze these dates for niches: ${niches.join(', ')} and return a JSON object with a dates array containing relevant dates.
 
 The response must be a JSON object in this exact format:
 {
@@ -13,7 +13,7 @@ The response must be a JSON object in this exact format:
 }
 
 Rules:
-1. Return ONLY a JSON object with a "dates" array
+1. Return ONLY a JSON object with a dates array
 2. Each date object must have exactly: date, relevance, reason
 3. Date format must be YYYY-MM-DD
 4. Relevance must be: high, medium, or low
