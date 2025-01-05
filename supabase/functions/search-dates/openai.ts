@@ -25,11 +25,11 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert. Your task is to analyze dates and return a JSON array. You must ONLY return a valid JSON array with this exact structure: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. Do not include any explanations, text, or formatting outside of the JSON array.' 
+            content: 'You are a marketing expert. You must return ONLY a valid JSON array with dates. The array must contain objects with exactly these fields: date (YYYY-MM-DD format), relevance (high/medium/low), and reason (brief text). Example: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. No other text or formatting allowed.' 
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.1, // Lower temperature for more consistent outputs
+        temperature: 0,
         max_tokens: 1000,
       }),
     });
@@ -49,7 +49,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     }
 
     const data = await response.json();
-    console.log('[OpenAI] Raw response:', JSON.stringify(data));
+    console.log('[OpenAI] Raw response:', data);
     
     if (!data.choices?.[0]?.message?.content) {
       throw new Error('Invalid response structure from OpenAI');
@@ -59,7 +59,11 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     console.log('[OpenAI] Content:', content);
 
     try {
-      const parsedData = JSON.parse(content);
+      // First, try to extract just the JSON array if there's any extra text
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      const jsonContent = jsonMatch ? jsonMatch[0] : content;
+      
+      const parsedData = JSON.parse(jsonContent);
       console.log('[OpenAI] Successfully parsed JSON:', parsedData);
       
       if (!Array.isArray(parsedData)) {
@@ -89,8 +93,8 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
       console.error('[OpenAI] Parse/validation error:', parseError);
       
       if (retryCount < MAX_RETRIES) {
-        console.log(`[OpenAI] Retrying with more explicit prompt...`);
-        const updatedPrompt = `${prompt}\n\nCRITICAL: You must return ONLY a valid JSON array. No text before or after. Format: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}].\n\nExample of valid response:\n[{"date": "2025-01-01", "relevance": "high", "reason": "New Year's Day"}]`;
+        console.log(`[OpenAI] Retrying with simplified prompt...`);
+        const updatedPrompt = `Return ONLY a JSON array like this: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. Dates to analyze: ${prompt}`;
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         return callOpenAI(updatedPrompt, retryCount + 1);
       }
