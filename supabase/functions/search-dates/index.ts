@@ -10,7 +10,12 @@ import { DateEntry } from './types.ts';
 serve(async (req) => {
   // Always handle CORS preflight requests first
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      headers: { 
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      }
+    });
   }
 
   try {
@@ -69,52 +74,29 @@ serve(async (req) => {
     const datesContent = formatDatesForGPT(preFilteredDates);
     const prompt = buildGPTPrompt(niches, datesContent);
 
-    // Get GPT analysis
-    console.log('[search-dates] Calling OpenAI for strict date filtering');
-    const gptData = await callOpenAI(prompt);
-
-    if (!gptData.choices?.[0]?.message?.content) {
-      console.error('[search-dates] Invalid GPT response:', gptData);
-      throw new Error('Invalid GPT response structure');
-    }
-
-    const gptContent = gptData.choices[0].message.content.trim();
-    console.log('[search-dates] Raw GPT response:', gptContent);
-    
-    // Parse and validate GPT response
-    let relevantDates;
     try {
-      relevantDates = JSON.parse(gptContent);
-    } catch (error) {
-      console.error('[search-dates] Failed to parse GPT response:', error);
-      const jsonMatch = gptContent.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        try {
-          relevantDates = JSON.parse(jsonMatch[0]);
-        } catch (secondError) {
-          console.error('[search-dates] Second parse attempt failed:', secondError);
-          throw new Error('Failed to parse GPT response as JSON');
-        }
-      } else {
-        throw new Error('Failed to parse GPT response as JSON');
+      // Get GPT analysis
+      console.log('[search-dates] Calling OpenAI for date filtering');
+      const gptResponse = await callOpenAI(prompt);
+      
+      if (!gptResponse || !Array.isArray(gptResponse)) {
+        console.error('[search-dates] Invalid GPT response format:', gptResponse);
+        throw new Error('Invalid response format from OpenAI');
       }
+
+      // Final validation and formatting
+      const formattedDates = validateAndFormatDates(gptResponse, allDates as DateEntry[], niches);
+      console.log(`[search-dates] Final filtered dates count: ${formattedDates.length}`);
+      
+      return new Response(
+        JSON.stringify({ dates: formattedDates }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } catch (openAIError) {
+      console.error('[search-dates] OpenAI error:', openAIError);
+      throw new Error(`OpenAI error: ${openAIError.message}`);
     }
-
-    console.log(`[search-dates] GPT returned ${relevantDates.length} relevant dates`);
-
-    // Final validation and formatting
-    const formattedDates = validateAndFormatDates(relevantDates, allDates as DateEntry[], niches);
-    console.log(`[search-dates] Final filtered dates count: ${formattedDates.length}`);
-    
-    return new Response(
-      JSON.stringify({ dates: formattedDates }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json',
-        } 
-      }
-    );
 
   } catch (error) {
     console.error('[search-dates] Error:', error);
