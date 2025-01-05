@@ -1,19 +1,17 @@
 import { corsHeaders } from './cors.ts';
 
-const RETRY_AFTER_MS = 3000;
+const RETRY_DELAY = 2000; // 2 seconds
 const MAX_RETRIES = 3;
-const BACKOFF_MULTIPLIER = 1.5;
 
-export async function callOpenAI(prompt: string): Promise<any> {
-  return callOpenAIWithRetry(prompt);
-}
-
-async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any> {
+export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
   const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
-  const waitTime = RETRY_AFTER_MS * Math.pow(BACKOFF_MULTIPLIER, retryCount);
   
+  if (!openAIApiKey) {
+    throw new Error('OpenAI API key not found');
+  }
+
   try {
-    console.log(`[DEBUG] Attempt ${retryCount + 1}/${MAX_RETRIES} to call OpenAI API`);
+    console.log(`[OpenAI] Attempt ${retryCount + 1}/${MAX_RETRIES}`);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -35,30 +33,26 @@ async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any>
     });
 
     if (!response.ok) {
-      console.error(`[ERROR] OpenAI API response status: ${response.status}`);
+      console.error(`[OpenAI] Error status: ${response.status}`);
       const errorText = await response.text();
-      console.error(`[ERROR] OpenAI API error details:`, errorText);
+      console.error('[OpenAI] Error details:', errorText);
 
       if (response.status === 429 && retryCount < MAX_RETRIES) {
-        console.log(`[INFO] Rate limited, waiting ${waitTime}ms before retry...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        return callOpenAIWithRetry(prompt, retryCount + 1);
+        console.log(`[OpenAI] Rate limited. Retrying in ${RETRY_DELAY}ms...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return callOpenAI(prompt, retryCount + 1);
       }
 
       throw new Error(`OpenAI API error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log(`[DEBUG] Successfully received OpenAI API response`);
     return data;
-
   } catch (error) {
-    console.error(`[ERROR] Error in OpenAI API call:`, error);
-    
     if (retryCount < MAX_RETRIES) {
-      console.log(`[INFO] Retrying after error, waiting ${waitTime}ms...`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      return callOpenAIWithRetry(prompt, retryCount + 1);
+      console.log(`[OpenAI] Error occurred. Retrying in ${RETRY_DELAY}ms...`);
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      return callOpenAI(prompt, retryCount + 1);
     }
     throw error;
   }

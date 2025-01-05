@@ -10,37 +10,33 @@ serve(async (req) => {
   }
 
   try {
+    console.log('[search-dates] Processing request');
     const { niches } = await req.json();
-    console.log("[DEBUG] Processing request for niches:", niches);
-
+    
     if (!niches || !Array.isArray(niches) || niches.length === 0) {
       throw new Error('Niches array is required');
     }
 
+    console.log('[search-dates] Fetching dates from DB');
     const allDates = await fetchDatesFromDB();
-    console.log(`[DEBUG] Found ${allDates.length} dates in database`);
-
     const datesForAnalysis = formatDatesForAnalysis(allDates);
-    const userPrompt = `Return a JSON array of dates from this list that are relevant for these niches: ${niches.join(', ')}.
-Dates: ${JSON.stringify(datesForAnalysis)}
-Return ONLY the JSON array, no other text.`;
+    
+    // Simplified prompt to reduce token usage
+    const userPrompt = `Analyze these dates and return only those relevant for these niches: ${niches.join(', ')}.\nDates: ${JSON.stringify(datesForAnalysis)}`;
 
-    console.log("[DEBUG] Sending request to GPT");
+    console.log('[search-dates] Calling OpenAI');
     const gptData = await callOpenAI(userPrompt);
-    console.log("[DEBUG] Received GPT response");
 
     if (!gptData.choices?.[0]?.message?.content) {
-      console.error('[ERROR] Invalid GPT response structure:', gptData);
+      console.error('[search-dates] Invalid GPT response:', gptData);
       throw new Error('Invalid GPT response structure');
     }
 
     const gptContent = gptData.choices[0].message.content.trim();
-    console.log("[DEBUG] Raw GPT content:", gptContent);
-
+    console.log('[search-dates] Processing GPT response');
+    
     const relevantDates = parseRelevantDates(gptContent);
-
     if (!Array.isArray(relevantDates)) {
-      console.error('[ERROR] GPT response is not an array:', relevantDates);
       throw new Error('GPT response is not an array');
     }
 
@@ -48,10 +44,8 @@ Return ONLY the JSON array, no other text.`;
       .filter(date => allDates.some(d => d.data === date.date))
       .map(date => {
         const originalDate = allDates.find(d => d.data === date.date);
-        if (!originalDate) {
-          console.warn(`[WARN] Could not find original date for ${date.date}`);
-          return null;
-        }
+        if (!originalDate) return null;
+        
         return {
           date: date.date,
           title: originalDate.descrição,
@@ -59,21 +53,21 @@ Return ONLY the JSON array, no other text.`;
           description: originalDate.descrição
         };
       })
-      .filter(date => date !== null);
+      .filter(Boolean);
 
-    console.log(`[INFO] Returning ${formattedDates.length} relevant dates`);
-
+    console.log(`[search-dates] Returning ${formattedDates.length} dates`);
+    
     return new Response(
       JSON.stringify({ dates: formattedDates }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('[ERROR] Function error:', error);
+    console.error('[search-dates] Error:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Failed to process request',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error.message
       }),
       { 
         status: 500,
