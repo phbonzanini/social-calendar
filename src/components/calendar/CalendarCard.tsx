@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent } from "@/components/ui/card";
 import { Check } from "lucide-react";
@@ -56,6 +56,9 @@ export const CalendarCard = ({
   isSelected,
   onSelect,
 }: CalendarCardProps) => {
+  // Ensure we're using the date exactly as it comes from the database
+  const formattedDate = format(new Date(date.date + 'T00:00:00'), "dd 'de' MMMM", { locale: ptBR });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -77,7 +80,7 @@ export const CalendarCard = ({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-muted-foreground">
-                {format(new Date(date.date), "dd 'de' MMMM", { locale: ptBR })}
+                {formattedDate}
               </span>
               <span
                 className={`text-xs px-2 py-1 rounded-full ${getCategoryColor(
