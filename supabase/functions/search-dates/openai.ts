@@ -25,11 +25,12 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert. Return ONLY a valid JSON array of dates in this exact format: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. Do not include any additional text or formatting.' 
+            content: 'You are a marketing expert. You must return ONLY a valid JSON array in this exact format, nothing else: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. The response must be parseable JSON.' 
           },
           { role: 'user', content: prompt }
         ],
         temperature: 0.3,
+        max_tokens: 1000,
       }),
     });
 
@@ -57,10 +58,9 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     const content = data.choices[0].message.content.trim();
     console.log('[OpenAI] Content:', content);
 
-    // First attempt: direct JSON parse
     try {
+      // First attempt: direct JSON parse
       const parsedData = JSON.parse(content);
-      console.log('[OpenAI] Successfully parsed JSON directly');
       
       if (!Array.isArray(parsedData)) {
         throw new Error('Response is not an array');
@@ -82,32 +82,21 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
           throw new Error(`Invalid relevance value at index ${index}`);
         }
       });
-      
+
+      console.log('[OpenAI] Successfully validated parsed data:', parsedData);
       return parsedData;
-    } catch (parseError) {
-      console.error('[OpenAI] Direct parse failed:', parseError);
       
-      // Second attempt: try to find JSON array in the content
-      const jsonMatch = content.match(/\[\s*{[\s\S]*}\s*\]/);
-      if (jsonMatch) {
-        try {
-          const extractedJson = jsonMatch[0];
-          console.log('[OpenAI] Found JSON array:', extractedJson);
-          
-          const parsedData = JSON.parse(extractedJson);
-          if (!Array.isArray(parsedData)) {
-            throw new Error('Extracted data is not an array');
-          }
-          
-          return parsedData;
-        } catch (extractError) {
-          console.error('[OpenAI] Failed to parse extracted JSON:', extractError);
-          throw new Error('Failed to parse extracted JSON array');
-        }
+    } catch (parseError) {
+      console.error('[OpenAI] Parse/validation error:', parseError);
+      
+      if (retryCount < MAX_RETRIES) {
+        console.log(`[OpenAI] Retrying with more explicit prompt...`);
+        const updatedPrompt = `${prompt}\n\nIMPORTANT: Your response must be ONLY a valid JSON array in this exact format: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. No other text.`;
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        return callOpenAI(updatedPrompt, retryCount + 1);
       }
       
-      console.error('[OpenAI] No valid JSON array found in response');
-      throw new Error('Could not extract valid JSON from OpenAI response');
+      throw new Error(`Failed to get valid JSON response after ${MAX_RETRIES} attempts`);
     }
   } catch (error) {
     console.error('[OpenAI] Error:', error);
