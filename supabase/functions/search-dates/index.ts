@@ -8,6 +8,7 @@ import { buildGPTPrompt } from './gptPrompt.ts';
 import { DateEntry } from './types.ts';
 
 serve(async (req) => {
+  // Always handle CORS preflight requests first
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -107,7 +108,12 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ dates: formattedDates }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+        } 
+      }
     );
 
   } catch (error) {
