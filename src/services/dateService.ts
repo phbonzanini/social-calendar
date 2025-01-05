@@ -27,15 +27,21 @@ export const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDat
       throw new Error(`Erro na função de busca: ${error.message}`);
     }
 
-    if (!data?.dates) {
-      console.log("Nenhuma data encontrada");
+    if (!data?.dates || !Array.isArray(data.dates)) {
+      console.log("Nenhuma data encontrada ou formato inválido");
       return [];
     }
 
-    const mappedDates = data.dates.map((date: any) => ({
-      ...date,
-      category: date.category.toLowerCase(),
-    }));
+    const mappedDates = data.dates
+      .filter(date => date && typeof date === 'object')
+      .map((date: any) => ({
+        date: date.date || '',
+        title: date.title || '',
+        category: (date.category && typeof date.category === 'string' 
+          ? date.category.toLowerCase() 
+          : 'commemorative') as CalendarDate['category'],
+        description: date.description || ''
+      }));
 
     console.log("Datas encontradas:", mappedDates);
     return mappedDates;
