@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import { LoadingState } from "@/components/calendar/LoadingState";
 import { getNiches } from "@/utils/nicheUtils";
 import { fetchDatesForNiches, type CalendarDate } from "@/services/dateService";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
 
 const Calendar = () => {
   const location = useLocation();
@@ -67,6 +69,18 @@ const Calendar = () => {
     }
   }, [isLoading, selectedNiches, navigate]);
 
+  // Separate general commemorative dates from niche-specific dates
+  const generalDates = dates?.filter(date => 
+    date.title.toLowerCase().includes("dia das mães") ||
+    date.title.toLowerCase().includes("dia dos pais") ||
+    date.title.toLowerCase().includes("natal") ||
+    date.title.toLowerCase().includes("ano novo") ||
+    date.title.toLowerCase().includes("dia do cliente") ||
+    date.title.toLowerCase().includes("black friday")
+  ) || [];
+
+  const nicheDates = dates?.filter(date => !generalDates.includes(date)) || [];
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -93,8 +107,31 @@ const Calendar = () => {
           </div>
         ) : (
           <>
+            {generalDates.length > 0 && (
+              <div className="mb-8">
+                <Alert className="mb-4 bg-primary/10 border-primary/20">
+                  <InfoCircledIcon className="h-4 w-4" />
+                  <AlertDescription>
+                    Estas são datas comemorativas gerais que sugerimos incluir em seu calendário, 
+                    pois costumam ser relevantes para diversos tipos de negócios.
+                  </AlertDescription>
+                </Alert>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {generalDates.map((date, index) => (
+                    <CalendarCard
+                      key={`${date.date}-${index}`}
+                      date={date}
+                      index={index}
+                      isSelected={selectedDates.some(d => d.date === date.date)}
+                      onSelect={() => handleDateSelect(date)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {dates?.map((date, index) => (
+              {nicheDates.map((date, index) => (
                 <CalendarCard
                   key={`${date.date}-${index}`}
                   date={date}
@@ -104,6 +141,7 @@ const Calendar = () => {
                 />
               ))}
             </div>
+
             <div className="mt-6 flex justify-end">
               <Button
                 onClick={handleContinue}
