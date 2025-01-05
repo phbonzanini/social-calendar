@@ -51,30 +51,50 @@ const Campaigns = () => {
       }
 
       try {
+        let createdCount = 0;
+
         for (const date of selectedDates) {
-          const campaignData = {
-            nome: date.title,
-            data_inicio: date.date,
-            data_fim: date.date,
-            descricao: date.description,
-            data_comemorativa: date.date,
-            id_user: session.session.user.id,
-            is_from_commemorative: true
-          };
-
-          const { error } = await supabase
+          // Check if a campaign already exists for this date and user
+          const { data: existingCampaigns } = await supabase
             .from("campanhas_marketing")
-            .insert([campaignData]);
+            .select("*")
+            .eq("data_comemorativa", date.date)
+            .eq("id_user", session.session.user.id)
+            .eq("is_from_commemorative", true);
 
-          if (error) throw error;
+          // Only create if no campaign exists for this date
+          if (!existingCampaigns || existingCampaigns.length === 0) {
+            const campaignData = {
+              nome: date.title,
+              data_inicio: date.date,
+              data_fim: date.date,
+              descricao: date.description,
+              data_comemorativa: date.date,
+              id_user: session.session.user.id,
+              is_from_commemorative: true
+            };
+
+            const { error } = await supabase
+              .from("campanhas_marketing")
+              .insert([campaignData]);
+
+            if (error) throw error;
+            createdCount++;
+          }
         }
 
-        toast({
-          title: "Campanhas criadas com sucesso!",
-          description: "As datas selecionadas foram adicionadas ao seu calendário.",
-        });
-
-        refetch();
+        if (createdCount > 0) {
+          toast({
+            title: "Campanhas criadas com sucesso!",
+            description: `${createdCount} nova(s) data(s) foram adicionadas ao seu calendário.`,
+          });
+          refetch();
+        } else {
+          toast({
+            title: "Nenhuma campanha nova criada",
+            description: "As datas selecionadas já existem no seu calendário.",
+          });
+        }
       } catch (error) {
         console.error("Erro ao criar campanhas:", error);
         toast({
