@@ -25,11 +25,11 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert. You must return ONLY a valid JSON array in this exact format, nothing else: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. The response must be parseable JSON.' 
+            content: 'You are a marketing expert. Your task is to analyze dates and return a JSON array. You must ONLY return a valid JSON array with this exact structure: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. Do not include any explanations, text, or formatting outside of the JSON array.' 
           },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.3,
+        temperature: 0.1, // Lower temperature for more consistent outputs
         max_tokens: 1000,
       }),
     });
@@ -59,8 +59,8 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     console.log('[OpenAI] Content:', content);
 
     try {
-      // First attempt: direct JSON parse
       const parsedData = JSON.parse(content);
+      console.log('[OpenAI] Successfully parsed JSON:', parsedData);
       
       if (!Array.isArray(parsedData)) {
         throw new Error('Response is not an array');
@@ -83,7 +83,6 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         }
       });
 
-      console.log('[OpenAI] Successfully validated parsed data:', parsedData);
       return parsedData;
       
     } catch (parseError) {
@@ -91,7 +90,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
       
       if (retryCount < MAX_RETRIES) {
         console.log(`[OpenAI] Retrying with more explicit prompt...`);
-        const updatedPrompt = `${prompt}\n\nIMPORTANT: Your response must be ONLY a valid JSON array in this exact format: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}]. No other text.`;
+        const updatedPrompt = `${prompt}\n\nCRITICAL: You must return ONLY a valid JSON array. No text before or after. Format: [{"date": "YYYY-MM-DD", "relevance": "high/medium/low", "reason": "brief explanation"}].\n\nExample of valid response:\n[{"date": "2025-01-01", "relevance": "high", "reason": "New Year's Day"}]`;
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
         return callOpenAI(updatedPrompt, retryCount + 1);
       }

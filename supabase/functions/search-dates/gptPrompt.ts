@@ -1,7 +1,7 @@
 export function buildGPTPrompt(niches: string[], datesContent: string): string {
   return `Analyze these dates and return ONLY a JSON array of relevant dates for these niches: ${niches.join(', ')}.
 
-You MUST return ONLY a valid JSON array in this EXACT format, with NO additional text or formatting:
+CRITICAL: You must return ONLY a valid JSON array with this exact structure. No text before or after:
 [
   {
     "date": "YYYY-MM-DD",
@@ -10,10 +10,13 @@ You MUST return ONLY a valid JSON array in this EXACT format, with NO additional
   }
 ]
 
+Example of valid response:
+[{"date": "2025-01-01", "relevance": "high", "reason": "New Year's Day"}]
+
 For healthcare/saúde e bem-estar niche, include health awareness and medical dates.
 
 Dates to analyze:
 ${datesContent}
 
-CRITICAL: Your response must be ONLY the JSON array. Do not include ANY text before or after the array. The response must be valid JSON that can be parsed directly.`;
+Remember: Return ONLY the JSON array. No explanations or additional text.`;
 }
