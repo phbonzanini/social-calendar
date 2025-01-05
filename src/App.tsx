@@ -10,6 +10,7 @@ import Calendar from "./pages/Calendar";
 import Campaigns from "./pages/Campaigns";
 import FinalCalendar from "./pages/FinalCalendar";
 import Login from "./pages/Login";
+import SignUp from "./pages/SignUp";
 import { FeedbackButton } from "./components/FeedbackButton";
 import { Navbar } from "./components/Navbar";
 import { useEffect, useState } from "react";
@@ -66,6 +67,7 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
             <Route
               path="/"
               element={
