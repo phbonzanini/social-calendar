@@ -47,7 +47,7 @@ export type Database = {
           data_inicio: string
           descricao: string | null
           id: number
-          id_user: number | null
+          id_user: string | null
           is_from_commemorative: boolean | null
           nome: string
           objetivo: string | null
@@ -59,7 +59,7 @@ export type Database = {
           data_inicio: string
           descricao?: string | null
           id?: number
-          id_user?: number | null
+          id_user?: string | null
           is_from_commemorative?: boolean | null
           nome: string
           objetivo?: string | null
@@ -71,20 +71,12 @@ export type Database = {
           data_inicio?: string
           descricao?: string | null
           id?: number
-          id_user?: number | null
+          id_user?: string | null
           is_from_commemorative?: boolean | null
           nome?: string
           objetivo?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "campanhas_marketing_id_user_fkey"
-            columns: ["id_user"]
-            isOneToOne: false
-            referencedRelation: "cadastros"
-            referencedColumns: ["id_user"]
-          },
-        ]
+        Relationships: []
       }
       datas_2025: {
         Row: {

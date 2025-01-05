@@ -9,6 +9,7 @@ import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { CampaignList } from "@/components/campaigns/CampaignList";
 import { CampaignForm } from "@/components/campaigns/CampaignForm";
 import { Campaign } from "@/types/campaign";
+import { useEffect } from "react";
 
 const Campaigns = () => {
   const location = useLocation();
@@ -34,6 +35,59 @@ const Campaigns = () => {
     },
   });
 
+  // Add automatic campaign creation for selected dates
+  useEffect(() => {
+    const createCampaignsForSelectedDates = async () => {
+      if (!selectedDates.length) return;
+
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session?.user?.id) {
+        toast({
+          title: "Erro de autenticação",
+          description: "Você precisa estar logado para criar campanhas.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      try {
+        for (const date of selectedDates) {
+          const campaignData = {
+            nome: date.title,
+            data_inicio: date.date,
+            data_fim: date.date,
+            descricao: date.description,
+            data_comemorativa: date.date,
+            id_user: session.session.user.id,
+            is_from_commemorative: true
+          };
+
+          const { error } = await supabase
+            .from("campanhas_marketing")
+            .insert([campaignData]);
+
+          if (error) throw error;
+        }
+
+        toast({
+          title: "Campanhas criadas com sucesso!",
+          description: "As datas selecionadas foram adicionadas ao seu calendário.",
+        });
+
+        refetch();
+      } catch (error) {
+        console.error("Erro ao criar campanhas:", error);
+        toast({
+          title: "Erro ao criar campanhas",
+          description: "Não foi possível criar as campanhas. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    createCampaignsForSelectedDates();
+  }, [selectedDates, toast, refetch]);
+
   const onSubmit = async (values: Omit<Campaign, "id">) => {
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -48,7 +102,7 @@ const Campaigns = () => {
         objetivo: values.objetivo || null,
         descricao: values.descricao || null,
         data_comemorativa: values.data_comemorativa || null,
-        id_user: session.session.user.id // This is now a UUID string
+        id_user: session.session.user.id
       };
 
       const { error } = await supabase
