@@ -15,8 +15,9 @@ const Campaigns = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  // Only get selectedDates from location.state once, and clear them after processing
   const selectedDates = location.state?.selectedDates || [];
-
+  
   const { data: campaigns, isLoading, refetch } = useQuery({
     queryKey: ["campaigns"],
     queryFn: async () => {
@@ -52,8 +53,13 @@ const Campaigns = () => {
 
       try {
         let createdCount = 0;
+        const processedDates = new Set(); // Track processed dates to avoid duplicates
 
         for (const date of selectedDates) {
+          // Skip if we've already processed this date in the current batch
+          if (processedDates.has(date.date)) continue;
+          processedDates.add(date.date);
+
           // Check if a campaign already exists for this date and user
           const { data: existingCampaigns } = await supabase
             .from("campanhas_marketing")
@@ -83,6 +89,9 @@ const Campaigns = () => {
           }
         }
 
+        // Clear the selectedDates from location state after processing
+        navigate(location.pathname, { replace: true });
+
         if (createdCount > 0) {
           toast({
             title: "Campanhas criadas com sucesso!",
@@ -106,7 +115,7 @@ const Campaigns = () => {
     };
 
     createCampaignsForSelectedDates();
-  }, [selectedDates, toast, refetch]);
+  }, [selectedDates, toast, refetch, navigate, location.pathname]);
 
   const onSubmit = async (values: Omit<Campaign, "id">) => {
     try {
