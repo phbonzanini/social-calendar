@@ -1,18 +1,15 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 2000; // 2 seconds
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+if (!openAIApiKey) {
+  throw new Error('OpenAI API key not found');
+}
 
-async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any> {
+export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
   try {
     console.log(`[OpenAI] Attempt ${retryCount + 1}/${MAX_RETRIES}`);
+    console.log('[OpenAI] Processing prompt:', prompt);
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -42,7 +39,7 @@ async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any>
       if (response.status === 429 && retryCount < MAX_RETRIES) {
         console.log(`[OpenAI] Rate limited. Retrying in ${RETRY_DELAY}ms...`);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1))); // Exponential backoff
-        return callOpenAIWithRetry(prompt, retryCount + 1);
+        return callOpenAI(prompt, retryCount + 1);
       }
 
       throw new Error(`OpenAI API error: ${response.status}`);
@@ -94,37 +91,9 @@ async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any>
       console.log(`[OpenAI] Retrying with simplified prompt...`);
       const simplifiedPrompt = `Return a JSON object with a dates array. Each date must have date (YYYY-MM-DD), relevance (high/medium/low), and reason. Example: {"dates":[{"date":"2025-01-01","relevance":"high","reason":"New Year"}]}. Original prompt: ${prompt}`;
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * (retryCount + 1)));
-      return callOpenAIWithRetry(simplifiedPrompt, retryCount + 1);
+      return callOpenAI(simplifiedPrompt, retryCount + 1);
     }
     
     throw error;
   }
 }
-
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const { prompt } = await req.json();
-    const dates = await callOpenAIWithRetry(prompt);
-
-    return new Response(JSON.stringify({ dates }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    console.error('Error in search-dates function:', error);
-    return new Response(
-      JSON.stringify({ 
-        error: 'Failed to process request',
-        details: error.message
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  }
-});
