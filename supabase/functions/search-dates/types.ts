@@ -17,7 +17,7 @@ export interface FormattedDate {
 export const nicheMapping: Record<string, string> = {
   'education': 'educação',
   'fashion': 'moda',
-  'healthcare': 'saúde e bem-estar',
+  'healthcare': 'saúde',  // Updated to match database value
   'finance': 'finanças',
   'gastronomy': 'gastronomia',
   'logistics': 'logística',
