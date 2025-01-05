@@ -10,7 +10,7 @@ import { LoadingState } from "@/components/calendar/LoadingState";
 import { getNiches } from "@/utils/nicheUtils";
 import { fetchDatesForNiches, type CalendarDate } from "@/services/dateService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
+import { Info } from "lucide-react";
 
 const Calendar = () => {
   const location = useLocation();
@@ -110,7 +110,7 @@ const Calendar = () => {
             {generalDates.length > 0 && (
               <div className="mb-8">
                 <Alert className="mb-4 bg-primary/10 border-primary/20">
-                  <InfoCircledIcon className="h-4 w-4" />
+                  <Info className="h-4 w-4" />
                   <AlertDescription>
                     Estas são datas comemorativas gerais que sugerimos incluir em seu calendário, 
                     pois costumam ser relevantes para diversos tipos de negócios.
