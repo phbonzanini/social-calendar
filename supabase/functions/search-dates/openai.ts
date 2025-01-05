@@ -25,7 +25,7 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
         messages: [
           { 
             role: 'system', 
-            content: 'You are a marketing expert. You must return ONLY a valid JSON array with dates. The array must contain objects with exactly these fields: date (YYYY-MM-DD format), relevance (high/medium/low), and reason (brief text). Example: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. No other text or formatting allowed.' 
+            content: 'You are a marketing expert. Return ONLY a JSON array of dates. Each object in the array must have exactly these fields: date (YYYY-MM-DD), relevance (high/medium/low), and reason (brief text). Example: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. Do not include any other text or formatting.' 
           },
           { role: 'user', content: prompt }
         ],
@@ -59,11 +59,13 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
     console.log('[OpenAI] Content:', content);
 
     try {
-      // First, try to extract just the JSON array if there's any extra text
+      // Extract JSON array using regex to handle any extra text
       const jsonMatch = content.match(/\[[\s\S]*\]/);
-      const jsonContent = jsonMatch ? jsonMatch[0] : content;
+      if (!jsonMatch) {
+        throw new Error('No JSON array found in response');
+      }
       
-      const parsedData = JSON.parse(jsonContent);
+      const parsedData = JSON.parse(jsonMatch[0]);
       console.log('[OpenAI] Successfully parsed JSON:', parsedData);
       
       if (!Array.isArray(parsedData)) {
@@ -94,9 +96,9 @@ export async function callOpenAI(prompt: string, retryCount = 0): Promise<any> {
       
       if (retryCount < MAX_RETRIES) {
         console.log(`[OpenAI] Retrying with simplified prompt...`);
-        const updatedPrompt = `Return ONLY a JSON array like this: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. Dates to analyze: ${prompt}`;
+        const simplifiedPrompt = `Return ONLY a JSON array of dates in this exact format: [{"date":"2025-01-01","relevance":"high","reason":"New Year"}]. No other text. Dates to analyze: ${prompt}`;
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-        return callOpenAI(updatedPrompt, retryCount + 1);
+        return callOpenAI(simplifiedPrompt, retryCount + 1);
       }
       
       throw new Error(`Failed to get valid JSON response after ${MAX_RETRIES} attempts`);
