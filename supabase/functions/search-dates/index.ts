@@ -25,19 +25,29 @@ serve(async (req) => {
     const datesForAnalysis = formatDatesForAnalysis(allDates);
     
     const userPrompt = `
-    Você é um especialista em marketing e análise de datas comemorativas. Analise RIGOROSAMENTE as datas fornecidas e retorne APENAS aquelas que têm uma conexão DIRETA, CLARA e MUITO RELEVANTE com os seguintes nichos de mercado: ${niches.join(', ')}.
+    Você é um especialista EXTREMAMENTE RIGOROSO em marketing e análise de datas comemorativas.
+    
+    Sua tarefa é analisar as datas fornecidas e retornar EXCLUSIVAMENTE aquelas que têm uma conexão DIRETA, EXPLÍCITA e INEQUÍVOCA com os seguintes nichos de mercado: ${niches.join(', ')}.
 
-    Uma data é considerada relevante SOMENTE se atender a TODOS estes critérios:
-    1. Tem relação DIRETA e ÓBVIA com o nicho (ex: "Dia do Chef de Cozinha" para nicho de gastronomia)
-    2. É uma data específica da profissão ou setor relacionado ao nicho
-    3. Representa uma oportunidade de marketing CLARA e DIRETA para o nicho
+    CRITÉRIOS OBRIGATÓRIOS - uma data só deve ser incluída se TODOS estes critérios forem atendidos:
+    1. A data DEVE mencionar EXPLICITAMENTE uma profissão, atividade ou evento que é CENTRAL para o nicho
+       Exemplo válido: "Dia do Contador" para nicho de finanças
+       Exemplo inválido: "Dia da Criatividade" para nicho de design (muito genérico)
+    
+    2. A data DEVE ser específica do setor profissional do nicho
+       Exemplo válido: "Dia do Chef de Cozinha" para gastronomia
+       Exemplo inválido: "Dia do Trabalho" (muito genérico)
+    
+    3. A data DEVE oferecer uma oportunidade de marketing ÓBVIA e DIRETA para empresas do nicho
+       Exemplo válido: "Dia do Programador" para tecnologia
+       Exemplo inválido: "Dia da Internet" (muito amplo)
 
-    IMPORTANTE:
-    - Seja MUITO RIGOROSO na seleção
-    - NÃO inclua datas com conexão indireta ou vaga
-    - NÃO inclua datas genéricas que poderiam se aplicar a vários nichos
-    - NÃO inclua datas que não tenham relação ÓBVIA com o nicho
-    - APENAS retorne datas que existem na lista fornecida, NÃO CRIE novas datas
+    REGRAS ESTRITAS DE EXCLUSÃO - NÃO inclua datas que:
+    - Têm apenas uma conexão tangencial ou indireta com o nicho
+    - São datas genéricas ou que poderiam se aplicar a múltiplos nichos
+    - Não mencionam explicitamente uma profissão ou atividade do nicho
+    - Não existem na lista fornecida (NÃO CRIE novas datas)
+    - Requerem interpretação subjetiva para relacionar ao nicho
 
     Retorne as datas EXATAMENTE neste formato JSON, mantendo o formato de data original:
     [{ "date": "YYYY-MM-DD", "title": "Título original", "category": "Categoria original" }]
@@ -53,21 +63,29 @@ serve(async (req) => {
     }
 
     const gptContent = gptData.choices[0].message.content.trim();
-    console.log('[search-dates] Processing GPT response:', gptContent);
+    console.log('[search-dates] Raw GPT response:', gptContent);
     
     const relevantDates = parseRelevantDates(gptContent);
     if (!Array.isArray(relevantDates)) {
       throw new Error('GPT response is not an array');
     }
 
-    // Strict validation to ensure dates exist in Supabase
+    // Validate each date against Supabase data
     const formattedDates = relevantDates
       .filter(date => {
         const exists = allDates.some(d => d.data === date.date);
         if (!exists) {
-          console.log(`[search-dates] Removing date ${date.date} as it doesn't exist in Supabase`);
+          console.log(`[search-dates] Removing invalid date ${date.date} - not found in Supabase`);
+          return false;
         }
-        return exists;
+
+        // Additional validation to ensure the date is truly relevant
+        const originalDate = allDates.find(d => d.data === date.date);
+        if (!originalDate) return false;
+
+        // Log each accepted date for debugging
+        console.log(`[search-dates] Accepting date: ${date.date} - ${originalDate.descrição}`);
+        return true;
       })
       .map(date => {
         const originalDate = allDates.find(d => d.data === date.date);
@@ -82,7 +100,7 @@ serve(async (req) => {
       })
       .filter(Boolean);
 
-    console.log(`[search-dates] Returning ${formattedDates.length} strictly filtered dates:`, formattedDates);
+    console.log(`[search-dates] Final filtered dates (${formattedDates.length}):`, formattedDates);
     
     return new Response(
       JSON.stringify({ dates: formattedDates }),
