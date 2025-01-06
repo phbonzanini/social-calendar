@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Campaign } from "./types";
 
-export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
+export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[], customTitle: string) => {
   // Set background color
   pdf.setFillColor(251, 247, 255);
   pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, "F");
@@ -11,7 +11,17 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
   // Add title
   pdf.setFontSize(20);
   pdf.setTextColor(155, 135, 245); // Primary color
-  pdf.text("Calendário de Campanhas 2025", pdf.internal.pageSize.width / 2, 15, { align: "center" });
+  pdf.text(customTitle, pdf.internal.pageSize.width / 2, 15, { align: "center" });
+
+  // Add CSV download info
+  pdf.setFontSize(10);
+  pdf.setTextColor(100, 100, 100);
+  pdf.text(
+    "Para ver informações detalhadas das campanhas, use o botão 'Baixar CSV'",
+    pdf.internal.pageSize.width / 2,
+    25,
+    { align: "center" }
+  );
 
   const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -19,7 +29,7 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
   ];
 
   const startX = 10;
-  const startY = 25;
+  const startY = 35;
   const monthWidth = (pdf.internal.pageSize.width - 20) / 2; // 2 columns
   const monthHeight = 45; // Adjusted height for portrait
   const padding = 5;
@@ -45,18 +55,18 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
       return startDate.getMonth() === index && startDate.getFullYear() === 2025;
     });
 
-    // Add campaign cards with adjusted positioning
+    // Add campaign cards
     monthCampaigns.forEach((campaign, campIndex) => {
       if (campIndex < 3) { // Limit to 3 campaigns per month to prevent overflow
         const cardY = y + 18 + (campIndex * 8);
         
-        // Campaign card background - Usando um tom mais claro de roxo
-        pdf.setFillColor(229, 222, 255); // Cor de fundo mais clara
+        // Campaign card background
+        pdf.setFillColor(229, 222, 255);
         pdf.roundedRect(x + padding, cardY, monthWidth - (padding * 3), 6, 2, 2, "F");
 
-        // Campaign details - Texto mais escuro para melhor contraste
+        // Campaign details
         pdf.setFontSize(7);
-        pdf.setTextColor(0, 0, 0); // Texto preto para máximo contraste
+        pdf.setTextColor(0, 0, 0);
         const startDate = format(new Date(campaign.data_inicio), "dd/MM", { locale: ptBR });
         const endDate = format(new Date(campaign.data_fim), "dd/MM", { locale: ptBR });
         const text = `${campaign.nome} (${startDate} - ${endDate})`;

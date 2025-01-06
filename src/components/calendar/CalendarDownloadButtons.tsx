@@ -1,112 +1,95 @@
-import { Download, FileDown } from "lucide-react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Download } from "lucide-react";
 import { createCalendarPDF } from "@/utils/pdf";
-
-interface Campaign {
-  id: number;
-  nome: string;
-  data_inicio: string;
-  data_fim: string;
-  objetivo?: string;
-  descricao?: string;
-  oferta?: string;
-}
+import { Campaign } from "@/utils/pdf/types";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 
 interface CalendarDownloadButtonsProps {
   campaigns: Campaign[];
-  months: string[];
 }
 
-export const CalendarDownloadButtons = ({ campaigns }: CalendarDownloadButtonsProps) => {
-  const { toast } = useToast();
+export function CalendarDownloadButtons({ campaigns }: CalendarDownloadButtonsProps) {
+  const [showTitleDialog, setShowTitleDialog] = useState(false);
+  const [customTitle, setCustomTitle] = useState("");
 
-  const downloadPDF = () => {
-    const pdf = createCalendarPDF(campaigns);
-    pdf.save("calendario-campanhas-2025.pdf");
-    
-    toast({
-      title: "Download concluído",
-      description: "O calendário foi baixado em formato PDF.",
-    });
+  const handleDownloadPDF = () => {
+    setShowTitleDialog(true);
   };
 
-  const downloadCSV = () => {
-    const headers = [
-      "Mês",
-      "Campanha",
-      "Data Início",
-      "Data Fim",
-      "Objetivo",
-      "Descrição",
-      "Oferta"
-    ];
-    
-    const months = [
-      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-    ];
-    
-    const rows = months.map(month => {
-      const monthCampaigns = campaigns?.filter(campaign => {
-        const startDate = new Date(campaign.data_inicio);
-        return startDate.getMonth() === months.indexOf(month) && startDate.getFullYear() === 2025;
-      });
+  const handleConfirmTitle = () => {
+    const pdf = createCalendarPDF(campaigns, customTitle || "Calendário de Campanhas 2025");
+    pdf.save("calendario-2025.pdf");
+    setShowTitleDialog(false);
+    setCustomTitle("");
+  };
 
-      if (!monthCampaigns?.length) return [];
-
-      return monthCampaigns.map(campaign => [
-        month,
-        campaign.nome,
-        format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR }),
-        format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR }),
-        campaign.objetivo || "",
-        campaign.descricao || "",
-        campaign.oferta || ""
-      ]);
-    }).flat();
-
+  const handleDownloadCSV = () => {
     const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
-    ].join("\n");
+      ["Nome", "Data Início", "Data Fim", "Descrição"],
+      ...campaigns.map((campaign) => [
+        campaign.nome,
+        campaign.data_inicio,
+        campaign.data_fim,
+        campaign.descricao,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "calendario-campanhas-2025.csv";
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "campanhas.csv");
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    toast({
-      title: "Download concluído",
-      description: "O calendário foi baixado em formato CSV.",
-    });
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      <Button
-        onClick={downloadPDF}
-        variant="outline"
-        size="sm"
-        className="flex items-center gap-2"
-      >
-        <Download className="h-4 w-4" />
+    <div className="flex gap-4">
+      <Button onClick={handleDownloadPDF} variant="outline">
+        <Download className="mr-2 h-4 w-4" />
         Baixar PDF
       </Button>
-      <Button
-        onClick={downloadCSV}
-        variant="outline"
-        size="sm"
-        className="flex items-center gap-2"
-      >
-        <FileDown className="h-4 w-4" />
+      <Button onClick={handleDownloadCSV} variant="outline">
+        <Download className="mr-2 h-4 w-4" />
         Baixar CSV
       </Button>
+
+      <AlertDialog open={showTitleDialog} onOpenChange={setShowTitleDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Personalizar título do PDF</AlertDialogTitle>
+            <AlertDialogDescription>
+              Digite o título que você gostaria que aparecesse no seu calendário PDF.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              placeholder="Calendário de Campanhas 2025"
+              value={customTitle}
+              onChange={(e) => setCustomTitle(e.target.value)}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmTitle}>Baixar PDF</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-};
+}
