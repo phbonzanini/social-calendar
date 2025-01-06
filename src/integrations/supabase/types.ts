@@ -114,6 +114,47 @@ export type Database = {
         }
         Relationships: []
       }
+      fases_campanha: {
+        Row: {
+          created_at: string | null
+          data_fim: string
+          data_inicio: string
+          descricao: string | null
+          id: number
+          id_campanha: number | null
+          nome: string
+          objetivo: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_fim: string
+          data_inicio: string
+          descricao?: string | null
+          id?: number
+          id_campanha?: number | null
+          nome: string
+          objetivo?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string | null
+          id?: number
+          id_campanha?: number | null
+          nome?: string
+          objetivo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fases_campanha_id_campanha_fkey"
+            columns: ["id_campanha"]
+            isOneToOne: false
+            referencedRelation: "campanhas_marketing"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           cargo: string | null
