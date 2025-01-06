@@ -20,11 +20,11 @@ interface CalendarDownloadButtonsProps {
   months: string[];
 }
 
-export const CalendarDownloadButtons = ({ campaigns, months }: CalendarDownloadButtonsProps) => {
+export const CalendarDownloadButtons = ({ campaigns }: CalendarDownloadButtonsProps) => {
   const { toast } = useToast();
 
   const downloadPDF = () => {
-    const pdf = createCalendarPDF(campaigns, months);
+    const pdf = createCalendarPDF(campaigns);
     pdf.save("calendario-campanhas-2025.pdf");
     
     toast({
@@ -42,6 +42,11 @@ export const CalendarDownloadButtons = ({ campaigns, months }: CalendarDownloadB
       "Objetivo",
       "Descrição",
       "Oferta"
+    ];
+    
+    const months = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     ];
     
     const rows = months.map(month => {
