@@ -8,6 +8,13 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[], customTitle: str
   pdf.setFillColor(251, 247, 255);
   pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, "F");
 
+  // Add logo
+  const logoWidth = 10;
+  const logoHeight = 10;
+  const logoX = pdf.internal.pageSize.width - logoWidth - 10; // 10mm from right margin
+  const logoY = 5; // 5mm from top
+  pdf.addImage("/lovable-uploads/e799ddf2-b654-4728-ae11-71d48fdc363c.png", "PNG", logoX, logoY, logoWidth, logoHeight);
+
   // Add title
   pdf.setFontSize(20);
   pdf.setTextColor(155, 135, 245); // Primary color
