@@ -29,24 +29,28 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
         const processedDates = new Set<string>();
 
         for (const date of selectedDates) {
-          // Skip if we've already processed this date in the current batch
-          if (processedDates.has(date.date)) {
-            console.log(`Skipping duplicate date: ${date.date}`);
+          // Create a unique key combining date and title
+          const uniqueKey = `${date.date}-${date.title}`;
+          
+          // Skip if we've already processed this exact date and title combination
+          if (processedDates.has(uniqueKey)) {
+            console.log(`Skipping duplicate date and title combination: ${uniqueKey}`);
             continue;
           }
-          processedDates.add(date.date);
+          processedDates.add(uniqueKey);
 
-          // Check if a campaign already exists for this date and user
+          // Check if a campaign already exists for this date, title and user
           const { data: existingCampaigns } = await supabase
             .from("campanhas_marketing")
             .select("*")
             .eq("data_comemorativa", date.date)
+            .eq("nome", date.title)
             .eq("id_user", session.session.user.id)
             .eq("is_from_commemorative", true);
 
-          // Only create if no campaign exists for this date
+          // Only create if no campaign exists for this date and title
           if (!existingCampaigns || existingCampaigns.length === 0) {
-            console.log(`Creating campaign for date: ${date.date}`);
+            console.log(`Creating campaign for date: ${date.date} and title: ${date.title}`);
             const campaignData = {
               nome: date.title,
               data_inicio: date.date,
@@ -67,7 +71,7 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
             }
             createdCount++;
           } else {
-            console.log(`Campaign already exists for date: ${date.date}`);
+            console.log(`Campaign already exists for date: ${date.date} and title: ${date.title}`);
           }
         }
 
