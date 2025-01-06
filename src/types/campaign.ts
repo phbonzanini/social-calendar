@@ -5,8 +5,8 @@ export interface Campaign {
   data_fim: string;
   objetivo?: string;
   descricao?: string;
-  data_comemorativa?: string;
-  id_user?: string; // Changed to string for UUID
+  oferta?: string;
+  id_user?: string;
   created_at?: string;
   is_from_commemorative?: boolean;
 }

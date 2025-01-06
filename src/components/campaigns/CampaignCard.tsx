@@ -52,9 +52,9 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
               <strong>Descrição:</strong> {campaign.descricao}
             </p>
           )}
-          {campaign.data_comemorativa && (
+          {campaign.oferta && (
             <p className="text-sm">
-              <strong>Data Comemorativa:</strong> {campaign.data_comemorativa}
+              <strong>Oferta:</strong> {campaign.oferta}
             </p>
           )}
         </div>

@@ -7,15 +7,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useEffect } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Tables } from "@/integrations/supabase/types";
-
-type CommemorativeDate = {
-  data: string | null;
-  descricao: string | null;
-};
 
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -23,7 +14,7 @@ const formSchema = z.object({
   data_fim: z.string().min(1, "Data de fim é obrigatória"),
   objetivo: z.string().optional(),
   descricao: z.string().optional(),
-  data_comemorativa: z.string().optional(),
+  oferta: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -44,26 +35,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
       data_fim: "",
       objetivo: "",
       descricao: "",
-      data_comemorativa: "",
-    },
-  });
-
-  const { data: commemorativeDates } = useQuery({
-    queryKey: ["commemorative-dates"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("datas_2025")
-        .select("*")
-        .order("data", { ascending: true });
-
-      if (error) throw error;
-
-      const rawData = data as unknown as Tables<"datas_2025">[];
-      
-      return rawData.map(item => ({
-        data: item.data,
-        descricao: item.descrição
-      }));
+      oferta: "",
     },
   });
 
@@ -142,34 +114,13 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
           />
           <FormField
             control={form.control}
-            name="data_comemorativa"
+            name="oferta"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Data Comemorativa</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma data comemorativa" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent 
-                    position="item-aligned" 
-                    className="max-h-[300px] bg-white border border-neutral-200 shadow-lg overflow-y-auto z-50 fixed"
-                    side="top"
-                    align="start"
-                    sideOffset={5}
-                  >
-                    {commemorativeDates?.map((date) => (
-                      <SelectItem 
-                        key={`${date.data}-${date.descricao}`} 
-                        value={date.descricao || ""}
-                        className="py-2 px-4 hover:bg-neutral-100"
-                      >
-                        {date.data} - {date.descricao}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormLabel>Oferta</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Ex: 20% de desconto" />
+                </FormControl>
               </FormItem>
             )}
           />
