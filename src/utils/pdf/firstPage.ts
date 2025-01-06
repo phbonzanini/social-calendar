@@ -4,12 +4,13 @@ import { ptBR } from "date-fns/locale";
 import { Campaign } from "./types";
 
 export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[], months: string[]) => {
+  // Set background color similar to the app's gradient
   pdf.setFillColor(251, 247, 255);
   pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, "F");
 
-  // Add title
+  // Add title with primary color
   pdf.setFontSize(24);
-  pdf.setTextColor(155, 135, 245);
+  pdf.setTextColor(155, 135, 245); // Primary color
   pdf.text("Calendário de Campanhas 2025", pdf.internal.pageSize.width / 2, 20, { align: "center" });
 
   const startX = 10;
@@ -25,24 +26,24 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[], months: string[]
     const x = startX + (col * monthWidth);
     const y = startY + (row * monthHeight);
 
-    // Add month name
+    // Month name with primary color
     pdf.setFontSize(14);
-    pdf.setTextColor(0, 0, 0);
+    pdf.setTextColor(155, 135, 245);
     pdf.text(month, x + 10, y + 15);
 
-    // Add weekday headers
+    // Weekday headers with neutral dark color
     pdf.setFontSize(8);
+    pdf.setTextColor(34, 34, 34);
     weekDays.forEach((day, dayIndex) => {
       pdf.text(day, x + 10 + (dayIndex * daySize), y + 25);
     });
 
-    // Calculate first day and number of days in month
+    // Calculate first day and days in month
     const date = new Date(2025, index, 1);
     const firstDay = date.getDay();
     const daysInMonth = new Date(2025, index + 1, 0).getDate();
 
-    // Add days
-    let currentDay = 1;
+    // Add calendar days
     const rows = Math.ceil((firstDay + daysInMonth) / 7);
 
     for (let week = 0; week < rows; week++) {
@@ -60,12 +61,12 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[], months: string[]
           });
 
           if (hasCampaign) {
-            // Draw circle for campaign days
+            // Draw circle for campaign days with primary color
             pdf.setFillColor(155, 135, 245);
             pdf.circle(xPos + 2, yPos - 2, 3, 'F');
             pdf.setTextColor(255, 255, 255);
           } else {
-            pdf.setTextColor(0, 0, 0);
+            pdf.setTextColor(34, 34, 34);
           }
 
           pdf.text(dayNumber.toString(), xPos, yPos);
