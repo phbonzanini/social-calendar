@@ -23,13 +23,13 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
             onClick={() => navigate("/calendar")}
             variant="outline"
             size="sm"
-            className="text-white"
+            className="text-neutral-dark bg-transparent border-neutral-dark hover:text-neutral-dark hover:bg-neutral-light/10"
           >
             Voltar ao Calendário
           </Button>
           <Dialog>
             <DialogTrigger asChild>
-              <Button size="sm" className="flex items-center gap-2 text-white">
+              <Button size="sm" className="flex items-center gap-2 bg-white text-neutral-dark hover:bg-neutral-light">
                 <Plus className="h-4 w-4" />
                 Nova Campanha
               </Button>
@@ -40,7 +40,7 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
             onClick={() => navigate("/final-calendar")}
             variant="outline"
             size="sm"
-            className="text-white"
+            className="text-neutral-dark bg-transparent border-neutral-dark hover:text-neutral-dark hover:bg-neutral-light/10"
           >
             Ver Calendário Final
           </Button>
