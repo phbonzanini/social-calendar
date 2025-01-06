@@ -14,8 +14,72 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+const nicheMapping: Record<string, string> = {
+  'education': 'educação',
+  'fashion': 'moda',
+  'healthcare': 'saúde',
+  'finance': 'finanças',
+  'gastronomy': 'gastronomia',
+  'logistics': 'logística',
+  'industry': 'indústria',
+  'tourism': 'turismo'
+};
+
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 2000; // 2 seconds
+
+async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any> {
+  try {
+    console.log(`[OpenAI] Attempt ${retryCount + 1}/${MAX_RETRIES}`);
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a JSON-only response bot. Return a JSON object with a "dates" array containing relevant dates.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[OpenAI] Error status: ${response.status}`);
+      console.error('[OpenAI] Error details:', errorText);
+
+      if (response.status === 429 && retryCount < MAX_RETRIES) {
+        const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+        console.log(`[OpenAI] Rate limited. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return callOpenAIWithRetry(prompt, retryCount + 1);
+      }
+
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return JSON.parse(data.choices[0].message.content);
+  } catch (error) {
+    if (retryCount < MAX_RETRIES) {
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      console.log(`[OpenAI] Error occurred. Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return callOpenAIWithRetry(prompt, retryCount + 1);
+    }
+    throw error;
+  }
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -71,41 +135,14 @@ serve(async (req) => {
       Dates: ${JSON.stringify(datesForGPT)}
       Return a JSON object with a "dates" array containing objects with: date, title, category (always "commemorative"), and description.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You are a JSON-only response bot. Return a JSON object with a "dates" array containing relevant dates.'
-          },
-          { role: 'user', content: prompt }
-        ],
-        response_format: { type: "json_object" }
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[OpenAI] Error status: ${response.status}`);
-      console.error('[OpenAI] Error details:', errorText);
-      throw new Error(`OpenAI API error: ${response.status}`);
-    }
-
-    const gptData = await response.json();
-    const gptResponse = JSON.parse(gptData.choices[0].message.content);
-    console.log("[Main] GPT Response:", gptResponse);
+    const gptData = await callOpenAIWithRetry(prompt);
+    console.log("[Main] GPT Response:", gptData);
 
     let relevantDates = [];
-    if (Array.isArray(gptResponse.dates)) {
-      relevantDates = gptResponse.dates;
+    if (Array.isArray(gptData.dates)) {
+      relevantDates = gptData.dates;
     } else {
-      console.error("[Main] Invalid GPT response format - dates is not an array:", gptResponse);
+      console.error("[Main] Invalid GPT response format - dates is not an array:", gptData);
       relevantDates = [];
     }
 
