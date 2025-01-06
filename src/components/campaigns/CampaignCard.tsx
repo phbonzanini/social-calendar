@@ -9,29 +9,32 @@ interface CampaignCardProps {
   campaign: Campaign;
   onEdit: (campaign: Campaign) => void;
   onDelete: (campaign: Campaign) => void;
+  showActions?: boolean;
 }
 
-export const CampaignCard = ({ campaign, onEdit, onDelete }: CampaignCardProps) => {
+export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }: CampaignCardProps) => {
   return (
     <Card className="bg-neutral-light/50 backdrop-blur-sm">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-xl font-bold">{campaign.nome}</CardTitle>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onEdit(campaign)}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(campaign)}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        </div>
+        {showActions && (
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onEdit(campaign)}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onDelete(campaign)}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-2">

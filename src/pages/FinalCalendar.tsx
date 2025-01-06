@@ -9,9 +9,14 @@ import { CalendarDownloadButtons } from "@/components/calendar/CalendarDownloadB
 import { Campaign } from "@/types/campaign";
 import { format, startOfYear, endOfYear, eachDayOfInterval, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState } from "react";
+import { CampaignCard } from "@/components/campaigns/CampaignCard";
 
 const FinalCalendar = () => {
   const navigate = useNavigate();
+  const [selectedCampaigns, setSelectedCampaigns] = useState<Campaign[]>([]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ["campaigns"],
@@ -46,13 +51,25 @@ const FinalCalendar = () => {
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
-  const isDayInAnyCampaign = (date: Date) => {
-    if (!campaigns) return false;
-    return campaigns.some(campaign => {
+  const getCampaignsForDay = (date: Date): Campaign[] => {
+    if (!campaigns) return [];
+    return campaigns.filter(campaign => {
       const campaignStart = parseISO(campaign.data_inicio);
       const campaignEnd = parseISO(campaign.data_fim);
       return isWithinInterval(date, { start: campaignStart, end: campaignEnd });
     });
+  };
+
+  const isDayInAnyCampaign = (date: Date) => {
+    return getCampaignsForDay(date).length > 0;
+  };
+
+  const handleDayClick = (date: Date) => {
+    const campaignsForDay = getCampaignsForDay(date);
+    if (campaignsForDay.length > 0) {
+      setSelectedCampaigns(campaignsForDay);
+      setIsDialogOpen(true);
+    }
   };
 
   const renderMonth = (monthIndex: number) => {
@@ -89,6 +106,7 @@ const FinalCalendar = () => {
                     ? "bg-primary text-white hover:bg-primary-dark cursor-pointer" 
                     : "text-neutral-dark hover:bg-neutral-light"
                 }`}
+                onClick={() => handleDayClick(date)}
               >
                 {format(date, "d")}
               </div>
@@ -139,6 +157,24 @@ const FinalCalendar = () => {
           </div>
         )}
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Campanhas nesta data</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedCampaigns.map((campaign) => (
+              <CampaignCard
+                key={campaign.id}
+                campaign={campaign}
+                onEdit={() => {}}
+                onDelete={() => {}}
+              />
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };
