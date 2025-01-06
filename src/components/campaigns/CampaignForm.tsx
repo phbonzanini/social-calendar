@@ -7,6 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -36,6 +39,19 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
       objetivo: "",
       descricao: "",
       data_comemorativa: "",
+    },
+  });
+
+  const { data: commemorativeDates } = useQuery({
+    queryKey: ["commemorative-dates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("datas_2025")
+        .select("data, descrição")
+        .order("data", { ascending: true });
+
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -118,9 +134,23 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Data Comemorativa</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma data comemorativa" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="max-h-[300px]">
+                    {commemorativeDates?.map((date) => (
+                      <SelectItem 
+                        key={`${date.data}-${date.descrição}`} 
+                        value={date.descrição || ""}
+                      >
+                        {date.data} - {date.descrição}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormItem>
             )}
           />
