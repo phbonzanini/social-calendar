@@ -11,6 +11,7 @@ import { getNiches } from "@/utils/nicheUtils";
 import { fetchDatesForNiches, type CalendarDate } from "@/services/dateService";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const Calendar = () => {
   const location = useLocation();
@@ -90,6 +91,35 @@ const Calendar = () => {
       {isLoading && <LoadingState />}
       <div className="max-w-4xl mx-auto">
         <CalendarHeader selectedNiches={selectedNiches} />
+
+        {/* Nova seção para datas selecionadas */}
+        <div className="mb-8 bg-white rounded-lg p-4 shadow-sm">
+          <h2 className="text-lg font-semibold mb-4">Datas Selecionadas ({selectedDates.length})</h2>
+          <ScrollArea className="h-32">
+            <div className="space-y-2">
+              {selectedDates.map((date) => (
+                <div
+                  key={date.date}
+                  className="flex items-center justify-between bg-primary/10 p-2 rounded-md"
+                >
+                  <span>{date.title}</span>
+                  <button
+                    onClick={() => handleDateSelect(date)}
+                    className="text-sm text-red-500 hover:text-red-700"
+                  >
+                    Remover
+                  </button>
+                </div>
+              ))}
+              {selectedDates.length === 0 && (
+                <p className="text-neutral-500 text-sm">
+                  Nenhuma data selecionada ainda
+                </p>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
         {error ? (
           <div className="min-h-[200px] flex flex-col items-center justify-center gap-4 p-6 bg-red-50 rounded-lg">
             <p className="text-red-600 text-center">
