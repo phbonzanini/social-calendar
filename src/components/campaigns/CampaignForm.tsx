@@ -59,7 +59,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
       if (error) throw error;
       
       // Transform the data to match our CommemorativeDate type
-      return data.map(item => ({
+      return (data as Tables<"datas_2025">[]).map(item => ({
         data: item.data,
         descricao: item.descrição
       }));
