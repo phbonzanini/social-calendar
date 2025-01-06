@@ -76,7 +76,7 @@ export const Navbar = () => {
                   <User className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-48 bg-white border border-neutral-200 shadow-lg">
                 <DropdownMenuItem onClick={handlePasswordReset}>
                   <Settings className="mr-2 h-4 w-4" />
                   Redefinir Senha
