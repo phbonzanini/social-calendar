@@ -15,7 +15,7 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
   return (
     <div className="mb-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
-        <h1 className="text-3xl font-bold text-neutral-dark">
+        <h1 className="text-3xl font-bold text-white">
           Gerenciar Campanhas
         </h1>
         <div className="flex gap-2">
@@ -23,12 +23,13 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
             onClick={() => navigate("/calendar")}
             variant="outline"
             size="sm"
+            className="text-white"
           >
             Voltar ao Calendário
           </Button>
           <Dialog>
             <DialogTrigger asChild>
-              <Button size="sm" className="flex items-center gap-2">
+              <Button size="sm" className="flex items-center gap-2 text-white">
                 <Plus className="h-4 w-4" />
                 Nova Campanha
               </Button>
@@ -39,6 +40,7 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
             onClick={() => navigate("/final-calendar")}
             variant="outline"
             size="sm"
+            className="text-white"
           >
             Ver Calendário Final
           </Button>
