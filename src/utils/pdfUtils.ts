@@ -114,11 +114,7 @@ const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
   campaigns.sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())
     .forEach(campaign => {
       // Calculate card height based on content
-      const hasObjective = campaign.objetivo?.length > 0;
-      const hasDescription = campaign.descricao?.length > 0;
-      const hasCommemorativeDate = campaign.data_comemorativa?.length > 0;
-      const extraFields = [hasObjective, hasDescription, hasCommemorativeDate].filter(Boolean).length;
-      const cardHeight = 25 + (extraFields * 10); // Base height + 10mm per extra field
+      const cardHeight = 45; // Fixed minimum height for all cards
 
       // Check if we need to add a new page
       if (detailY + cardHeight > pdf.internal.pageSize.height - 20) {
@@ -147,17 +143,17 @@ const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(10);
 
-      if (hasObjective) {
+      if (campaign.objetivo) {
         pdf.text(`Objetivo: ${campaign.objetivo}`, 15, textY);
         textY += 7;
       }
 
-      if (hasDescription) {
+      if (campaign.descricao) {
         pdf.text(`Descrição: ${campaign.descricao}`, 15, textY);
         textY += 7;
       }
 
-      if (hasCommemorativeDate) {
+      if (campaign.data_comemorativa) {
         pdf.text(`Data Comemorativa: ${campaign.data_comemorativa}`, 15, textY);
       }
 
