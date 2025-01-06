@@ -25,12 +25,63 @@ const nicheMapping: Record<string, string> = {
   'tourism': 'turismo'
 };
 
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: corsHeaders,
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 2000; // 2 seconds
+
+async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any> {
+  try {
+    console.log(`[OpenAI] Attempt ${retryCount + 1}/${MAX_RETRIES}`);
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a JSON-only response bot. Return a JSON object with a "dates" array containing relevant dates.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: "json_object" }
+      }),
     });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[OpenAI] Error status: ${response.status}`);
+      console.error('[OpenAI] Error details:', errorText);
+
+      if (response.status === 429 && retryCount < MAX_RETRIES) {
+        const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+        console.log(`[OpenAI] Rate limited. Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return callOpenAIWithRetry(prompt, retryCount + 1);
+      }
+
+      throw new Error(`OpenAI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return JSON.parse(data.choices[0].message.content);
+  } catch (error) {
+    if (retryCount < MAX_RETRIES) {
+      const delay = INITIAL_RETRY_DELAY * Math.pow(2, retryCount);
+      console.log(`[OpenAI] Error occurred. Retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return callOpenAIWithRetry(prompt, retryCount + 1);
+    }
+    throw error;
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -47,7 +98,6 @@ serve(async (req) => {
       throw new Error('No niches provided');
     }
 
-    // Traduz os nichos para português
     const translatedNiches = niches.map(niche => {
       const translated = nicheMapping[niche]?.toLowerCase();
       console.log(`[Main] Translating niche ${niche} to ${translated}`);
@@ -56,7 +106,6 @@ serve(async (req) => {
 
     console.log("[Main] Translated niches:", translatedNiches);
 
-    // Busca todas as datas do Supabase
     const { data: dates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
@@ -70,77 +119,34 @@ serve(async (req) => {
       console.log("[Main] No dates found in database");
       return new Response(
         JSON.stringify({ dates: [] }),
-        { 
-          headers: { 
-            ...corsHeaders, 
-            'Content-Type': 'application/json' 
-          } 
-        }
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log("[Main] Total dates from database:", dates.length);
 
-    // Prepara os dados para o GPT de forma mais concisa
     const datesForGPT = dates.map(date => ({
       date: date.data,
       description: date.descrição,
       niches: [date['nicho 1'], date['nicho 2'], date['nicho 3']].filter(Boolean)
     }));
 
-    // Chama a API do GPT para filtrar as datas relevantes
-    const gptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that analyzes dates and their relevance to specific business niches. Return only a JSON object with a "dates" array containing relevant dates.'
-          },
-          {
-            role: 'user',
-            content: `Analyze these dates and return only those relevant to these niches: ${translatedNiches.join(', ')}. 
-            Dates: ${JSON.stringify(datesForGPT)}
-            Return a JSON object with a "dates" array containing objects with: date, title, category (always "commemorative"), and description.`
-          }
-        ],
-        response_format: { type: "json_object" }
-      }),
-    });
+    const prompt = `Analyze these dates and return only those relevant to these niches: ${translatedNiches.join(', ')}. 
+      Dates: ${JSON.stringify(datesForGPT)}
+      Return a JSON object with a "dates" array containing objects with: date, title, category (always "commemorative"), and description.`;
 
-    if (!gptResponse.ok) {
-      console.error("[Main] OpenAI API error status:", gptResponse.status);
-      const errorText = await gptResponse.text();
-      console.error("[Main] OpenAI API error response:", errorText);
-      throw new Error(`OpenAI API error: ${gptResponse.status}`);
-    }
-
-    const gptData = await gptResponse.json();
+    const gptData = await callOpenAIWithRetry(prompt);
     console.log("[Main] GPT Response:", gptData);
 
     let relevantDates = [];
-    try {
-      if (gptData?.choices?.[0]?.message?.content) {
-        const parsedContent = JSON.parse(gptData.choices[0].message.content);
-        if (Array.isArray(parsedContent.dates)) {
-          relevantDates = parsedContent.dates;
-        } else {
-          console.error("[Main] Invalid GPT response format - dates is not an array:", parsedContent);
-          relevantDates = [];
-        }
-      }
-    } catch (error) {
-      console.error("[Main] Error parsing GPT response:", error);
-      console.error("[Main] Raw GPT response content:", gptData?.choices?.[0]?.message?.content);
+    if (Array.isArray(gptData.dates)) {
+      relevantDates = gptData.dates;
+    } else {
+      console.error("[Main] Invalid GPT response format - dates is not an array:", gptData);
       relevantDates = [];
     }
 
-    // Adiciona datas gerais importantes
+    // Add general important dates
     const generalDates = dates.filter(date => {
       const description = date.descrição?.toLowerCase() || '';
       return (
@@ -158,7 +164,6 @@ serve(async (req) => {
       description: date.descrição || ''
     }));
 
-    // Combina as datas e remove duplicatas
     const allDates = [...generalDates, ...relevantDates];
     const uniqueDates = Array.from(
       new Map(allDates.map(date => [date.date, date])).values()
@@ -168,12 +173,7 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ dates: uniqueDates }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
@@ -185,10 +185,7 @@ serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
