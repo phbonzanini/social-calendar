@@ -62,7 +62,7 @@ export function CalendarDownloadButtons({ campaigns }: CalendarDownloadButtonsPr
 
   return (
     <div className="flex gap-4">
-      <Button onClick={handleDownloadPDF} variant="outline" className="text-white">
+      <Button onClick={handleDownloadPDF} variant="outline">
         <Download className="mr-2 h-4 w-4" />
         Baixar PDF
       </Button>
