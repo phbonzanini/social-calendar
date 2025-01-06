@@ -50,13 +50,13 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
       if (campIndex < 3) { // Limit to 3 campaigns per month to prevent overflow
         const cardY = y + 18 + (campIndex * 8);
         
-        // Campaign card background
-        pdf.setFillColor(155, 135, 245, 0.1);
+        // Campaign card background - Usando um tom mais claro de roxo
+        pdf.setFillColor(229, 222, 255); // Cor de fundo mais clara
         pdf.roundedRect(x + padding, cardY, monthWidth - (padding * 3), 6, 2, 2, "F");
 
-        // Campaign details
+        // Campaign details - Texto mais escuro para melhor contraste
         pdf.setFontSize(7);
-        pdf.setTextColor(34, 34, 34);
+        pdf.setTextColor(0, 0, 0); // Texto preto para máximo contraste
         const startDate = format(new Date(campaign.data_inicio), "dd/MM", { locale: ptBR });
         const endDate = format(new Date(campaign.data_fim), "dd/MM", { locale: ptBR });
         const text = `${campaign.nome} (${startDate} - ${endDate})`;
