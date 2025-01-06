@@ -9,6 +9,7 @@ import Calendar from "./pages/Calendar";
 import Campaigns from "./pages/Campaigns";
 import FinalCalendar from "./pages/FinalCalendar";
 import { AppSidebar } from "./components/AppSidebar";
+import { Loader2 } from "lucide-react";
 
 export const AppRoutes = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
@@ -17,10 +18,19 @@ export const AppRoutes = () => {
     supabase.auth.onAuthStateChange((event, session) => {
       setIsAuthenticated(!!session);
     });
+
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setIsAuthenticated(!!session);
+    });
   }, []);
 
   if (isAuthenticated === null) {
-    return null;
+    return (
+      <div className="h-screen w-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
   return (
@@ -71,6 +81,7 @@ export const AppRoutes = () => {
               )
             }
           />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
     </>
