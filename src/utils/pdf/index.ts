@@ -4,7 +4,7 @@ import { addFirstPage } from "./firstPage";
 
 export const createCalendarPDF = (campaigns: Campaign[]) => {
   const pdf = new jsPDF({
-    orientation: "landscape",
+    orientation: "portrait",
     unit: "mm",
   });
 

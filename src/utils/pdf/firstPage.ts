@@ -9,9 +9,9 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
   pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, "F");
 
   // Add title
-  pdf.setFontSize(24);
+  pdf.setFontSize(20);
   pdf.setTextColor(155, 135, 245); // Primary color
-  pdf.text("Calendário de Campanhas 2025", pdf.internal.pageSize.width / 2, 20, { align: "center" });
+  pdf.text("Calendário de Campanhas 2025", pdf.internal.pageSize.width / 2, 15, { align: "center" });
 
   const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -19,14 +19,14 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
   ];
 
   const startX = 10;
-  const startY = 35;
-  const monthWidth = (pdf.internal.pageSize.width - 25) / 3; // Adjusted width
-  const monthHeight = 55; // Adjusted height
+  const startY = 25;
+  const monthWidth = (pdf.internal.pageSize.width - 20) / 2; // 2 columns
+  const monthHeight = 45; // Adjusted height for portrait
   const padding = 5;
 
   months.forEach((month, index) => {
-    const col = index % 3;
-    const row = Math.floor(index / 3);
+    const col = index % 2; // 2 columns instead of 3
+    const row = Math.floor(index / 2);
     const x = startX + (col * monthWidth);
     const y = startY + (row * monthHeight);
 
@@ -48,11 +48,11 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
     // Add campaign cards with adjusted positioning
     monthCampaigns.forEach((campaign, campIndex) => {
       if (campIndex < 3) { // Limit to 3 campaigns per month to prevent overflow
-        const cardY = y + 18 + (campIndex * 10);
+        const cardY = y + 18 + (campIndex * 8);
         
         // Campaign card background
         pdf.setFillColor(155, 135, 245, 0.1);
-        pdf.roundedRect(x + padding, cardY, monthWidth - (padding * 3), 8, 2, 2, "F");
+        pdf.roundedRect(x + padding, cardY, monthWidth - (padding * 3), 6, 2, 2, "F");
 
         // Campaign details
         pdf.setFontSize(7);
@@ -65,10 +65,10 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
         const maxWidth = monthWidth - (padding * 4);
         let truncatedText = text;
         if (pdf.getTextWidth(text) > maxWidth) {
-          truncatedText = text.substring(0, 20) + "...";
+          truncatedText = text.substring(0, 25) + "...";
         }
         
-        pdf.text(truncatedText, x + (padding * 2), cardY + 5);
+        pdf.text(truncatedText, x + (padding * 2), cardY + 4);
       }
     });
   });
