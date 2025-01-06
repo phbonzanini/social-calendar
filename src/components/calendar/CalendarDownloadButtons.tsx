@@ -36,15 +36,17 @@ export function CalendarDownloadButtons({ campaigns }: CalendarDownloadButtonsPr
 
   const handleDownloadCSV = () => {
     const csvContent = [
-      ["Nome", "Data Início", "Data Fim", "Descrição"],
+      ["Nome", "Data Início", "Data Fim", "Objetivo", "Descrição", "Oferta"],
       ...campaigns.map((campaign) => [
         campaign.nome,
         campaign.data_inicio,
         campaign.data_fim,
-        campaign.descricao,
+        campaign.objetivo || "",
+        campaign.descricao || "",
+        campaign.oferta || "",
       ]),
     ]
-      .map((row) => row.join(","))
+      .map((row) => row.map(cell => `"${cell}"`).join(","))
       .join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
