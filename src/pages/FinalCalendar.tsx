@@ -138,7 +138,7 @@ const FinalCalendar = () => {
                 onClick={() => navigate("/campaigns")}
                 variant="outline"
                 size="sm"
-                className="text-neutral-dark bg-white border-neutral-dark hover:text-neutral-dark hover:bg-neutral-light"
+                className="text-neutral-dark bg-white hover:text-neutral-dark hover:bg-neutral-light"
               >
                 Voltar às Campanhas
               </Button>
