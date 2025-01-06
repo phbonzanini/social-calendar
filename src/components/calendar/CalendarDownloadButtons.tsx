@@ -14,6 +14,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CalendarDownloadButtonsProps {
   campaigns: Campaign[];
@@ -34,19 +35,49 @@ export function CalendarDownloadButtons({ campaigns }: CalendarDownloadButtonsPr
     setCustomTitle("");
   };
 
-  const handleDownloadCSV = () => {
-    const csvContent = [
-      ["Nome", "Data Início", "Data Fim", "Objetivo", "Descrição", "Oferta"],
-      ...campaigns.map((campaign) => [
+  const handleDownloadCSV = async () => {
+    // Fetch phases for all campaigns
+    const campaignIds = campaigns.map(campaign => campaign.id);
+    const { data: phases } = await supabase
+      .from("fases_campanha")
+      .select("*")
+      .in("id_campanha", campaignIds)
+      .order("data_inicio");
+
+    // Create CSV content with hierarchical numbering
+    const csvRows = [];
+    csvRows.push(["Número", "Nome", "Data Início", "Data Fim", "Objetivo", "Descrição", "Oferta"]);
+
+    campaigns.forEach((campaign, index) => {
+      // Add campaign row with number
+      const campaignNumber = index + 1;
+      csvRows.push([
+        `${campaignNumber}`,
         campaign.nome,
         campaign.data_inicio,
         campaign.data_fim,
         campaign.objetivo || "",
         campaign.descricao || "",
         campaign.oferta || "",
-      ]),
-    ]
-      .map((row) => row.map(cell => `"${cell}"`).join(","))
+      ]);
+
+      // Add phase rows with subnumbers
+      const campaignPhases = phases?.filter(phase => phase.id_campanha === campaign.id) || [];
+      campaignPhases.forEach((phase, phaseIndex) => {
+        csvRows.push([
+          `${campaignNumber}.${phaseIndex + 1}`,
+          phase.nome,
+          phase.data_inicio,
+          phase.data_fim,
+          phase.objetivo || "",
+          phase.descricao || "",
+          "",  // Phases don't have offers
+        ]);
+      });
+    });
+
+    const csvContent = csvRows
+      .map(row => row.map(cell => `"${cell}"`).join(","))
       .join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
