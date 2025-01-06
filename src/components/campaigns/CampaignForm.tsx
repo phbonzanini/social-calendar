@@ -57,9 +57,12 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
         .order("data", { ascending: true });
 
       if (error) throw error;
+
+      // First assert the type of data as Tables<"datas_2025">[]
+      const typedData = data as Tables<"datas_2025">[];
       
-      // Transform the data to match our CommemorativeDate type
-      return (data as Tables<"datas_2025">[]).map(item => ({
+      // Then transform it to match our CommemorativeDate type
+      return typedData.map(item => ({
         data: item.data,
         descricao: item.descrição
       }));
