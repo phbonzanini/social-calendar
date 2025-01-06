@@ -1,48 +1,40 @@
-import { Campaign } from "./types";
+import jsPDF from "jspdf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Campaign } from "./types";
 
-export const addFirstPage = (pdf: any, campaigns: Campaign[]) => {
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 10;
-  const padding = 5;
+export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[]) => {
+  // Set background color
+  pdf.setFillColor(251, 247, 255);
+  pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, "F");
 
-  // Title
-  pdf.setFontSize(16);
-  pdf.setTextColor(34, 34, 34);
-  pdf.text("Calendário de Campanhas 2025", margin, margin + 10);
+  // Add title
+  pdf.setFontSize(20);
+  pdf.setTextColor(155, 135, 245); // Primary color
+  pdf.text("Calendário de Campanhas 2025", pdf.internal.pageSize.width / 2, 15, { align: "center" });
 
-  // Info text about CSV download
-  pdf.setFontSize(10);
-  pdf.setTextColor(100, 100, 100);
-  pdf.text(
-    "Para visualizar informações detalhadas das campanhas, baixe o arquivo CSV utilizando o botão 'Baixar CSV'.",
-    margin,
-    margin + 20
-  );
-
-  // Calendar grid setup
-  const monthsPerRow = 2;
-  const monthWidth = (pageWidth - (margin * 2)) / monthsPerRow;
-  const monthHeight = 45;
   const months = [
-    "Janeiro", "Fevereiro", "Março", "Abril",
-    "Maio", "Junho", "Julho", "Agosto",
-    "Setembro", "Outubro", "Novembro", "Dezembro"
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
+  const startX = 10;
+  const startY = 25;
+  const monthWidth = (pdf.internal.pageSize.width - 20) / 2; // 2 columns
+  const monthHeight = 45; // Adjusted height for portrait
+  const padding = 5;
+
   months.forEach((month, index) => {
-    const row = Math.floor(index / monthsPerRow);
-    const col = index % monthsPerRow;
-    const x = margin + (col * monthWidth);
-    const y = margin + 30 + (row * monthHeight);
+    const col = index % 2; // 2 columns instead of 3
+    const row = Math.floor(index / 2);
+    const x = startX + (col * monthWidth);
+    const y = startY + (row * monthHeight);
 
-    // Month card background
+    // Draw month card background
     pdf.setFillColor(255, 255, 255);
-    pdf.roundedRect(x, y, monthWidth - padding, monthHeight - padding, 2, 2, "F");
+    pdf.roundedRect(x, y, monthWidth - padding, monthHeight - padding, 3, 3, "F");
 
-    // Month title
+    // Month name
     pdf.setFontSize(12);
     pdf.setTextColor(34, 34, 34);
     pdf.text(month, x + padding, y + 12);
@@ -53,7 +45,7 @@ export const addFirstPage = (pdf: any, campaigns: Campaign[]) => {
       return startDate.getMonth() === index && startDate.getFullYear() === 2025;
     });
 
-    // Add campaign cards
+    // Add campaign cards with adjusted positioning
     monthCampaigns.forEach((campaign, campIndex) => {
       if (campIndex < 3) { // Limit to 3 campaigns per month to prevent overflow
         const cardY = y + 18 + (campIndex * 8);
@@ -70,21 +62,14 @@ export const addFirstPage = (pdf: any, campaigns: Campaign[]) => {
         const text = `${campaign.nome} (${startDate} - ${endDate})`;
         
         // Truncate text if too long
-        const maxLength = 25;
-        const displayText = text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
-        pdf.text(displayText, x + padding + 1, cardY + 4);
+        const maxWidth = monthWidth - (padding * 4);
+        let truncatedText = text;
+        if (pdf.getTextWidth(text) > maxWidth) {
+          truncatedText = text.substring(0, 25) + "...";
+        }
+        
+        pdf.text(truncatedText, x + (padding * 2), cardY + 4);
       }
     });
-
-    // If there are more campaigns than shown
-    if (monthCampaigns.length > 3) {
-      pdf.setFontSize(6);
-      pdf.setTextColor(100, 100, 100);
-      pdf.text(
-        `+${monthCampaigns.length - 3} campanhas`,
-        x + padding,
-        y + 18 + (3 * 8) + 4
-      );
-    }
   });
 };
