@@ -22,9 +22,12 @@ export async function analyzeRelevantDates(prompt: string): Promise<OpenAIRespon
     messages: [
       {
         role: "system",
-        content: "Você é um especialista em marketing que ajuda a identificar datas comemorativas relevantes para diferentes nichos de negócio. Analise as datas fornecidas e retorne apenas as que são realmente relevantes para os nichos especificados, incluindo uma breve explicação do por quê cada data é relevante."
+        content: "You are a marketing specialist that helps identify relevant commemorative dates for different business niches. You will analyze the provided dates and return a JSON object containing only the dates that are relevant for the specified niches. Your response must be a valid JSON object."
       },
-      { role: "user", content: prompt }
+      { 
+        role: "user", 
+        content: `Please analyze these dates and return a JSON object with relevant dates. ${prompt}`
+      }
     ],
     temperature: 0,
     response_format: { type: "json_object" }

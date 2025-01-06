@@ -50,20 +50,19 @@ serve(async (req) => {
 
     // Prepara o prompt com as datas filtradas
     const datesPrompt = formatDatesForPrompt(datesToAnalyze);
-    const fullPrompt = `Analise estas datas para os nichos: ${translatedNiches.join(", ")}.\n\nDatas para análise:\n${datesPrompt}`;
 
     // Chama OpenAI para análise
-    const gptResult = await analyzeRelevantDates(fullPrompt);
+    const gptResult = await analyzeRelevantDates(datesPrompt);
     console.log("[Main] GPT Response:", gptResult);
 
     let relevantDates = [];
     try {
       const parsedContent = JSON.parse(gptResult.choices[0].message.content);
-      relevantDates = parsedContent.relevant_dates || [];
+      relevantDates = parsedContent.dates || [];
       console.log("[Main] Parsed relevant dates:", relevantDates);
     } catch (error) {
       console.error("[Main] Error parsing GPT response:", error);
-      relevantDates = [];
+      throw new Error('Failed to parse OpenAI response as JSON');
     }
 
     // Combina as datas relevantes com as datas comemorativas gerais
