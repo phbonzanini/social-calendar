@@ -114,12 +114,39 @@ const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
   
   let currentColumn = 0;
   let detailY = 30;
-  const cardHeight = 45;
+  const baseCardPadding = 10;
+  const lineHeight = 7;
   const maxY = pdf.internal.pageSize.height - 20;
+
+  // Set font sizes for measurements
+  const titleFontSize = 12;
+  const dateFontSize = 10;
+  const contentFontSize = 9;
 
   campaigns
     .sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())
     .forEach(campaign => {
+      // Calculate card height based on content
+      pdf.setFontSize(titleFontSize);
+      const titleLines = pdf.splitTextToSize(campaign.nome, columnWidth - 10).length;
+      
+      pdf.setFontSize(contentFontSize);
+      const objetivoLines = campaign.objetivo ? 
+        pdf.splitTextToSize(`Objetivo: ${campaign.objetivo}`, columnWidth - 10).length : 0;
+      const descricaoLines = campaign.descricao ? 
+        pdf.splitTextToSize(`Descrição: ${campaign.descricao}`, columnWidth - 10).length : 0;
+      const dataComemLines = campaign.data_comemorativa ? 
+        pdf.splitTextToSize(`Data Comemorativa: ${campaign.data_comemorativa}`, columnWidth - 10).length : 0;
+
+      // Calculate total card height
+      const cardHeight = baseCardPadding + 
+        (titleLines * lineHeight) +
+        (lineHeight) + // Date line
+        (objetivoLines * lineHeight) +
+        (descricaoLines * lineHeight) +
+        (dataComemLines * lineHeight) +
+        baseCardPadding;
+
       // Calculate X position based on current column
       const currentX = margin + (currentColumn * (columnWidth + columnGap));
 
@@ -141,43 +168,49 @@ const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
       pdf.setFillColor(255, 255, 255);
       pdf.roundedRect(currentX, detailY - 5, columnWidth, cardHeight, 3, 3, "F");
 
-      // Campaign name and dates
-      pdf.setFontSize(12);
+      // Campaign name
+      pdf.setFontSize(titleFontSize);
       pdf.setTextColor(155, 135, 245);
-      pdf.text(campaign.nome, currentX + 5, detailY + 5, {
-        maxWidth: columnWidth - 10
-      });
+      const titleY = pdf.splitTextToSize(campaign.nome, columnWidth - 10)
+        .reduce((y, line) => {
+          pdf.text(line, currentX + 5, y);
+          return y + lineHeight;
+        }, detailY + 5);
 
-      pdf.setFontSize(10);
+      // Dates
+      pdf.setFontSize(dateFontSize);
       pdf.setTextColor(142, 145, 150);
       const dateText = `${format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - ${format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR })}`;
-      pdf.text(dateText, currentX + 5, detailY + 12, {
-        maxWidth: columnWidth - 10
-      });
+      let currentY = titleY + 2;
+      pdf.text(dateText, currentX + 5, currentY);
 
       // Add details
-      let textY = detailY + 20;
       pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(9);
+      pdf.setFontSize(contentFontSize);
+      currentY += lineHeight;
 
       if (campaign.objetivo) {
-        pdf.text(`Objetivo: ${campaign.objetivo}`, currentX + 5, textY, {
-          maxWidth: columnWidth - 10
-        });
-        textY += 7;
+        currentY = pdf.splitTextToSize(`Objetivo: ${campaign.objetivo}`, columnWidth - 10)
+          .reduce((y, line) => {
+            pdf.text(line, currentX + 5, y);
+            return y + lineHeight;
+          }, currentY);
       }
 
       if (campaign.descricao) {
-        pdf.text(`Descrição: ${campaign.descricao}`, currentX + 5, textY, {
-          maxWidth: columnWidth - 10
-        });
-        textY += 7;
+        currentY = pdf.splitTextToSize(`Descrição: ${campaign.descricao}`, columnWidth - 10)
+          .reduce((y, line) => {
+            pdf.text(line, currentX + 5, y);
+            return y + lineHeight;
+          }, currentY);
       }
 
       if (campaign.data_comemorativa) {
-        pdf.text(`Data Comemorativa: ${campaign.data_comemorativa}`, currentX + 5, textY, {
-          maxWidth: columnWidth - 10
-        });
+        pdf.splitTextToSize(`Data Comemorativa: ${campaign.data_comemorativa}`, columnWidth - 10)
+          .forEach(line => {
+            pdf.text(line, currentX + 5, currentY);
+            currentY += lineHeight;
+          });
       }
 
       // Move to next card position
