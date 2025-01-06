@@ -91,7 +91,6 @@ export const CalendarCard = ({
               </span>
             </div>
             <h3 className="font-semibold">{date.title}</h3>
-            <p className="text-sm text-muted-foreground">{date.description}</p>
           </div>
         </CardContent>
       </Card>
