@@ -11,6 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+interface CommemorativeDate {
+  data: string | null;
+  descrição: string | null;
+}
+
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   data_inicio: z.string().min(1, "Data de início é obrigatória"),
@@ -42,7 +47,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
     },
   });
 
-  const { data: commemorativeDates } = useQuery({
+  const { data: commemorativeDates } = useQuery<CommemorativeDate[]>({
     queryKey: ["commemorative-dates"],
     queryFn: async () => {
       const { data, error } = await supabase
