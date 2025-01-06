@@ -12,7 +12,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 
-type CommemorativeDate = Pick<Tables<"datas_2025">, "data" | "descrição">;
+type CommemorativeDate = {
+  data: string | null;
+  descricao: string | null;
+};
 
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -50,11 +53,11 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
     queryFn: async () => {
       const { data, error } = await supabase
         .from("datas_2025")
-        .select("data, descrição")
+        .select("data, descrição as descricao")
         .order("data", { ascending: true });
 
       if (error) throw error;
-      return data;
+      return data as CommemorativeDate[];
     },
   });
 
@@ -146,10 +149,10 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
                   <SelectContent className="max-h-[300px]">
                     {commemorativeDates?.map((date) => (
                       <SelectItem 
-                        key={`${date.data}-${date.descrição}`} 
-                        value={date.descrição || ""}
+                        key={`${date.data}-${date.descricao}`} 
+                        value={date.descricao || ""}
                       >
-                        {date.data} - {date.descrição}
+                        {date.data} - {date.descricao}
                       </SelectItem>
                     ))}
                   </SelectContent>
