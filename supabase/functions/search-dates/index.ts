@@ -7,7 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -17,7 +16,7 @@ const supabase = createClient(
 const nicheMapping: Record<string, string> = {
   'education': 'educação',
   'fashion': 'moda',
-  'healthcare': 'saúde',  // Simplificado para corresponder ao banco
+  'healthcare': 'saúde e bem-estar',
   'finance': 'finanças',
   'gastronomy': 'gastronomia',
   'logistics': 'logística',
@@ -26,6 +25,7 @@ const nicheMapping: Record<string, string> = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -43,32 +43,49 @@ serve(async (req) => {
       .from('datas_2025')
       .select('*');
 
-    if (dbError) throw dbError;
+    if (dbError) {
+      console.error("Database error:", dbError);
+      throw dbError;
+    }
+
+    console.log("Total dates from database:", dates?.length);
 
     // Filtra as datas relevantes baseado nos nichos
     const relevantDates = dates.filter(date => {
+      // Verifica se é uma data comemorativa geral
+      const isGeneralDate = 
+        date.descrição?.toLowerCase().includes('dia das mães') ||
+        date.descrição?.toLowerCase().includes('dia dos pais') ||
+        date.descrição?.toLowerCase().includes('natal') ||
+        date.descrição?.toLowerCase().includes('ano novo') ||
+        date.descrição?.toLowerCase().includes('dia do cliente') ||
+        date.descrição?.toLowerCase().includes('black friday');
+
+      if (isGeneralDate) {
+        console.log("Found general date:", date.descrição);
+        return true;
+      }
+
+      // Coleta todos os nichos da data
       const dateNiches = [
         date['nicho 1']?.toLowerCase(),
         date['nicho 2']?.toLowerCase(),
         date['nicho 3']?.toLowerCase()
       ].filter(Boolean);
 
-      // Datas comemorativas gerais que devem ser incluídas
-      const isGeneralDate = date.descrição?.toLowerCase().includes('dia das mães') ||
-                           date.descrição?.toLowerCase().includes('dia dos pais') ||
-                           date.descrição?.toLowerCase().includes('natal') ||
-                           date.descrição?.toLowerCase().includes('ano novo') ||
-                           date.descrição?.toLowerCase().includes('dia do cliente') ||
-                           date.descrição?.toLowerCase().includes('black friday');
-
-      if (isGeneralDate) return true;
-
       // Verifica se algum dos nichos traduzidos corresponde aos nichos da data
-      return translatedNiches.some(niche => 
-        dateNiches.some(dateNiche => 
-          dateNiche?.includes(niche.toLowerCase())
-        )
-      );
+      const hasMatchingNiche = translatedNiches.some(niche => {
+        const nicheMatch = dateNiches.some(dateNiche => {
+          const matches = dateNiche?.includes(niche.toLowerCase());
+          if (matches) {
+            console.log(`Match found: ${dateNiche} includes ${niche}`);
+          }
+          return matches;
+        });
+        return nicheMatch;
+      });
+
+      return hasMatchingNiche;
     });
 
     console.log("Relevant dates found:", relevantDates.length);
