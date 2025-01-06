@@ -51,6 +51,7 @@ export type Database = {
           is_from_commemorative: boolean | null
           nome: string
           objetivo: string | null
+          oferta: string | null
         }
         Insert: {
           created_at?: string | null
@@ -63,6 +64,7 @@ export type Database = {
           is_from_commemorative?: boolean | null
           nome: string
           objetivo?: string | null
+          oferta?: string | null
         }
         Update: {
           created_at?: string | null
@@ -75,6 +77,7 @@ export type Database = {
           is_from_commemorative?: boolean | null
           nome?: string
           objetivo?: string | null
+          oferta?: string | null
         }
         Relationships: []
       }

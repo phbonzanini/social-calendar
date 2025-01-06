@@ -30,7 +30,7 @@ export const CampaignList = ({ campaigns, isLoading }: CampaignListProps) => {
           data_fim: values.data_fim,
           objetivo: values.objetivo || null,
           descricao: values.descricao || null,
-          data_comemorativa: values.data_comemorativa || null,
+          oferta: values.oferta || null,
         })
         .eq("id", selectedCampaign.id);
 

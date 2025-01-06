@@ -31,8 +31,9 @@ export const EditCampaignDialog = ({
             data_fim: campaign.data_fim,
             objetivo: campaign.objetivo || "",
             descricao: campaign.descricao || "",
-            data_comemorativa: campaign.data_comemorativa || "",
+            oferta: campaign.oferta || "",
           }}
+          isEditing={true}
         />
       </DialogContent>
     </Dialog>

@@ -44,7 +44,7 @@ const Campaigns = () => {
         data_fim: values.data_fim,
         objetivo: values.objetivo || null,
         descricao: values.descricao || null,
-        data_comemorativa: values.data_comemorativa || null,
+        oferta: values.oferta || null,
         id_user: session.session.user.id
       };
 

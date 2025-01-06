@@ -16,7 +16,7 @@ interface Campaign {
   data_fim: string;
   objetivo?: string;
   descricao?: string;
-  data_comemorativa?: string;
+  oferta?: string;
 }
 
 interface MonthCardProps {
@@ -61,7 +61,7 @@ export const MonthCard = ({ month, monthIndex, campaigns }: MonthCardProps) => {
           data_fim: values.data_fim,
           objetivo: values.objetivo || null,
           descricao: values.descricao || null,
-          data_comemorativa: values.data_comemorativa || null,
+          oferta: values.oferta || null,
         })
         .eq("id", selectedCampaign.id);
 
@@ -163,7 +163,7 @@ export const MonthCard = ({ month, monthIndex, campaigns }: MonthCardProps) => {
               data_fim: selectedCampaign.data_fim,
               objetivo: selectedCampaign.objetivo || "",
               descricao: selectedCampaign.descricao || "",
-              data_comemorativa: selectedCampaign.data_comemorativa || "",
+              oferta: selectedCampaign.oferta || "",
             }}
             isEditing={true}
           />
