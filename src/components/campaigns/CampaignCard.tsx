@@ -22,6 +22,7 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
   const [phases, setPhases] = useState<CampaignPhase[]>([]);
   const [selectedPhase, setSelectedPhase] = useState<CampaignPhase | null>(null);
   const [isEditPhaseDialogOpen, setIsEditPhaseDialogOpen] = useState(false);
+  const [isNewPhaseDialogOpen, setIsNewPhaseDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
         description: "A fase foi adicionada à campanha.",
       });
 
+      setIsNewPhaseDialogOpen(false);
       fetchPhases();
     } catch (error) {
       console.error("Error creating phase:", error);
@@ -176,7 +178,7 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Fases da Campanha</h3>
-              <Dialog>
+              <Dialog open={isNewPhaseDialogOpen} onOpenChange={setIsNewPhaseDialogOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="flex items-center gap-2">
                     <Plus className="h-4 w-4" />

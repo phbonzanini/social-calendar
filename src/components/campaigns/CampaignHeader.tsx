@@ -4,6 +4,7 @@ import { Plus, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CampaignForm } from "./CampaignForm";
 import { Campaign } from "@/types/campaign";
+import { useState } from "react";
 
 interface CampaignHeaderProps {
   onSubmit: (values: Omit<Campaign, "id">) => Promise<void>;
@@ -11,6 +12,12 @@ interface CampaignHeaderProps {
 
 export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
   const navigate = useNavigate();
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleSubmit = async (values: Omit<Campaign, "id">) => {
+    await onSubmit(values);
+    setIsDialogOpen(false);
+  };
 
   return (
     <div className="mb-6">
@@ -19,14 +26,14 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
           Gerenciar Campanhas
         </h1>
         <div className="flex flex-wrap gap-2">
-          <Dialog>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm" className="flex items-center gap-2 bg-white text-neutral-dark hover:bg-neutral-light">
                 <Plus className="h-4 w-4" />
                 Nova Campanha
               </Button>
             </DialogTrigger>
-            <CampaignForm onSubmit={onSubmit} />
+            <CampaignForm onSubmit={handleSubmit} />
           </Dialog>
           <Button
             onClick={() => navigate("/calendar")}
