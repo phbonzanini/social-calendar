@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { CalendarDownloadButtons } from "@/components/calendar/CalendarDownloadButtons";
 import { Campaign } from "@/types/campaign";
-import { format, startOfYear, endOfYear, eachDayOfInterval, isWithinInterval, parseISO } from "date-fns";
+import { format, startOfYear, endOfYear, eachDayOfInterval, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
@@ -54,9 +54,20 @@ const FinalCalendar = () => {
   const getCampaignsForDay = (date: Date): Campaign[] => {
     if (!campaigns) return [];
     return campaigns.filter(campaign => {
-      const campaignStart = parseISO(campaign.data_inicio);
-      const campaignEnd = parseISO(campaign.data_fim);
-      return isWithinInterval(date, { start: campaignStart, end: campaignEnd });
+      // Criar datas sem considerar o horário
+      const campaignStart = new Date(campaign.data_inicio);
+      campaignStart.setUTCHours(0, 0, 0, 0);
+      
+      const campaignEnd = new Date(campaign.data_fim);
+      campaignEnd.setUTCHours(23, 59, 59, 999);
+      
+      const checkDate = new Date(date);
+      checkDate.setUTCHours(12, 0, 0, 0);
+
+      return isWithinInterval(checkDate, { 
+        start: campaignStart, 
+        end: campaignEnd 
+      });
     });
   };
 
