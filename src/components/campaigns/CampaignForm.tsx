@@ -53,11 +53,16 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
     queryFn: async () => {
       const { data, error } = await supabase
         .from("datas_2025")
-        .select("data, descrição as descricao")
+        .select("data, descrição")
         .order("data", { ascending: true });
 
       if (error) throw error;
-      return data as CommemorativeDate[];
+      
+      // Transform the data to match our CommemorativeDate type
+      return data.map(item => ({
+        data: item.data,
+        descricao: item.descrição
+      }));
     },
   });
 
