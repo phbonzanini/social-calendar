@@ -35,6 +35,10 @@ serve(async (req) => {
     const { niches } = await req.json();
     console.log("Received niches:", niches);
 
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key not configured');
+    }
+
     // Traduz os nichos para português
     const translatedNiches = niches.map(niche => nicheMapping[niche] || niche);
     console.log("Translated niches:", translatedNiches);
@@ -83,7 +87,7 @@ serve(async (req) => {
 
     // Prepara o prompt para o GPT
     const prompt = {
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -102,19 +106,48 @@ serve(async (req) => {
       response_format: { type: "json_object" }
     };
 
-    // Chama a API do OpenAI
-    const openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${openAIApiKey}`
-      },
-      body: JSON.stringify(prompt)
-    });
+    console.log("Sending request to OpenAI with prompt:", JSON.stringify(prompt, null, 2));
 
-    if (!openAIResponse.ok) {
-      console.error("OpenAI API error:", await openAIResponse.text());
-      throw new Error("Failed to get response from OpenAI");
+    // Chama a API do OpenAI com retry
+    let openAIResponse;
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${openAIApiKey}`
+          },
+          body: JSON.stringify(prompt)
+        });
+
+        if (openAIResponse.ok) {
+          break;
+        }
+
+        console.error(`OpenAI request failed (attempt ${retryCount + 1}):`, await openAIResponse.text());
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+        }
+      } catch (error) {
+        console.error(`OpenAI request error (attempt ${retryCount + 1}):`, error);
+        retryCount++;
+        
+        if (retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        } else {
+          throw new Error('Failed to get response from OpenAI after multiple attempts');
+        }
+      }
+    }
+
+    if (!openAIResponse?.ok) {
+      throw new Error('Failed to get valid response from OpenAI');
     }
 
     const gptResult = await openAIResponse.json();
