@@ -17,7 +17,7 @@ const getConfig = (pdf: jsPDF): PDFConfig => ({
   dateFontSize: 8
 });
 
-export const addDetailedPages = (pdf: jsPDF) => {
+export const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
   pdf.addPage('landscape');
   const config = getConfig(pdf);
   
@@ -91,9 +91,9 @@ export const addDetailedPages = (pdf: jsPDF) => {
   addTableHeader();
 
   // Sort campaigns by start date and add them to the table
-  const campaigns = Array.from(document.querySelectorAll('[data-campaign]')).map(
-    (el) => JSON.parse(el.getAttribute('data-campaign') || '{}')
-  ).sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime());
+  const sortedCampaigns = [...campaigns].sort(
+    (a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime()
+  );
 
-  campaigns.forEach(addTableRow);
+  sortedCampaigns.forEach(addTableRow);
 };
