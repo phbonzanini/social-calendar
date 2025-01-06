@@ -79,4 +79,9 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[], customTitle: str
       }
     });
   });
+
+  // Add footer text
+  pdf.setFontSize(8);
+  pdf.setTextColor(128, 128, 128); // Gray color for subtle appearance
+  pdf.text("Feito com https://socialcalendar.com.br/", pdf.internal.pageSize.width / 2, pdf.internal.pageSize.height - 10, { align: "center" });
 };
