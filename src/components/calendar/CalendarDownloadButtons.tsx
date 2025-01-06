@@ -49,14 +49,32 @@ export const CalendarDownloadButtons = ({ campaigns, months }: CalendarDownloadB
             yPosition = 20;
           }
 
-          pdf.text(`${campaign.nome}`, 30, yPosition);
+          pdf.text(`Campanha: ${campaign.nome}`, 30, yPosition);
           yPosition += 5;
+          
           pdf.text(
-            `${format(new Date(campaign.data_inicio), "dd/MM", { locale: ptBR })} - ${format(new Date(campaign.data_fim), "dd/MM", { locale: ptBR })}`,
+            `Período: ${format(new Date(campaign.data_inicio), "dd/MM", { locale: ptBR })} - ${format(new Date(campaign.data_fim), "dd/MM", { locale: ptBR })}`,
             30,
             yPosition
           );
-          yPosition += 10;
+          yPosition += 5;
+
+          if (campaign.objetivo) {
+            pdf.text(`Objetivo: ${campaign.objetivo}`, 30, yPosition);
+            yPosition += 5;
+          }
+
+          if (campaign.descricao) {
+            pdf.text(`Descrição: ${campaign.descricao}`, 30, yPosition);
+            yPosition += 5;
+          }
+
+          if (campaign.data_comemorativa) {
+            pdf.text(`Data Comemorativa: ${campaign.data_comemorativa}`, 30, yPosition);
+            yPosition += 5;
+          }
+
+          yPosition += 10; // Extra space between campaigns
         });
       }
     });
@@ -69,7 +87,16 @@ export const CalendarDownloadButtons = ({ campaigns, months }: CalendarDownloadB
   };
 
   const downloadCSV = () => {
-    const headers = ["Mês", "Campanha", "Data Início", "Data Fim", "Descrição"];
+    const headers = [
+      "Mês",
+      "Campanha",
+      "Data Início",
+      "Data Fim",
+      "Objetivo",
+      "Descrição",
+      "Data Comemorativa"
+    ];
+    
     const rows = months.map(month => {
       const monthCampaigns = campaigns?.filter(campaign => {
         const startDate = new Date(campaign.data_inicio);
@@ -83,13 +110,15 @@ export const CalendarDownloadButtons = ({ campaigns, months }: CalendarDownloadB
         campaign.nome,
         format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR }),
         format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR }),
-        campaign.descricao || ""
+        campaign.objetivo || "",
+        campaign.descricao || "",
+        campaign.data_comemorativa || ""
       ]);
     }).flat();
 
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.join(","))
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(","))
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
