@@ -13,7 +13,6 @@ const SignUp = () => {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    confirmPassword: "",
     name: "",
     phone: "",
   });
@@ -30,12 +29,6 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      // Validate passwords match
-      if (formData.password !== formData.confirmPassword) {
-        toast.error("As senhas não coincidem");
-        return;
-      }
-
       // Validate password length
       if (formData.password.length < 6) {
         toast.error("A senha deve ter pelo menos 6 caracteres");
@@ -122,18 +115,6 @@ const SignUp = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Mínimo 6 caracteres"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar senha</Label>
-              <Input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="Digite a senha novamente"
               />
             </div>
             <Button
