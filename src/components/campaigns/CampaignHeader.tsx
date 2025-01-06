@@ -23,7 +23,7 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
             onClick={() => navigate("/calendar")}
             variant="outline"
             size="sm"
-            className="text-neutral-dark bg-white border-neutral-dark hover:text-neutral-dark hover:bg-neutral-light"
+            className="text-neutral-dark bg-white hover:text-neutral-dark hover:bg-neutral-light"
           >
             Voltar ao Calendário
           </Button>
@@ -40,7 +40,7 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
             onClick={() => navigate("/final-calendar")}
             variant="outline"
             size="sm"
-            className="text-neutral-dark bg-white border-neutral-dark hover:text-neutral-dark hover:bg-neutral-light"
+            className="text-neutral-dark bg-white hover:text-neutral-dark hover:bg-neutral-light"
           >
             Ver Calendário Final
           </Button>
