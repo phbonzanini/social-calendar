@@ -75,8 +75,8 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
           }
         }
 
-        // Clear the selectedDates from location state after processing
-        navigate(location.pathname, { replace: true });
+        // Clear the selectedDates from location state
+        navigate(location.pathname, { replace: true, state: {} });
 
         if (createdCount > 0) {
           toast({
