@@ -170,6 +170,7 @@ const FinalCalendar = () => {
                 campaign={campaign}
                 onEdit={() => {}}
                 onDelete={() => {}}
+                showActions={false}
               />
             ))}
           </div>
