@@ -1,16 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Configuration, OpenAIApi } from 'https://esm.sh/openai@3.3.0';
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const openai = new OpenAIApi(new Configuration({
-  apiKey: Deno.env.get('OPENAI_API_KEY'),
-}));
-
+const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_ANON_KEY') ?? ''
@@ -40,6 +37,8 @@ serve(async (req) => {
       niches: [date['nicho 1'], date['nicho 2'], date['nicho 3']].filter(Boolean)
     }));
 
+    console.log("Formatted dates for GPT:", formattedDates);
+
     // Create prompt for GPT
     const prompt = `Given these dates and niches (${niches.join(', ')}), return only the relevant dates in this exact JSON format:
     {
@@ -55,31 +54,43 @@ serve(async (req) => {
     
     Dates to analyze: ${JSON.stringify(formattedDates)}`;
 
-    const completion = await openai.createChatCompletion({
-      model: "gpt-4",
-      messages: [
-        {
-          role: "system",
-          content: "You are a helpful assistant that analyzes dates and returns relevant ones based on business niches."
-        },
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
+    // Call OpenAI API directly
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a helpful assistant that analyzes dates and returns relevant ones based on business niches.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+      }),
     });
 
-    const response = completion.data.choices[0]?.message?.content;
-    if (!response) {
-      throw new Error('No response from OpenAI');
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API error: ${response.status}`);
     }
 
-    console.log("OpenAI response:", response);
+    const openAIResponse = await response.json();
+    console.log("Raw OpenAI response:", openAIResponse);
+
+    const content = openAIResponse.choices?.[0]?.message?.content;
+    if (!content) {
+      throw new Error('No content in OpenAI response');
+    }
 
     let parsedResponse;
     try {
-      parsedResponse = JSON.parse(response);
+      parsedResponse = JSON.parse(content);
     } catch (error) {
       console.error("Error parsing OpenAI response:", error);
       throw new Error('Invalid JSON response from OpenAI');
@@ -96,6 +107,8 @@ serve(async (req) => {
       category: date.category || 'commemorative',
       description: date.description || date.title || ''
     }));
+
+    console.log("Validated dates:", validatedDates);
 
     return new Response(
       JSON.stringify({ dates: validatedDates }),
