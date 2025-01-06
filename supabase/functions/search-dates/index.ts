@@ -66,11 +66,10 @@ serve(async (req) => {
 
     console.log("[Main] Total dates from database:", dates.length);
 
-    // Prepara os dados para o GPT
+    // Prepara os dados para o GPT de forma mais concisa
     const datesForGPT = dates.map(date => ({
       date: date.data,
       description: date.descrição,
-      type: date.tipo,
       niches: [date['nicho 1'], date['nicho 2'], date['nicho 3']].filter(Boolean)
     }));
 
@@ -86,14 +85,13 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that analyzes dates and their relevance to specific business niches. Please return your response in JSON format.'
+            content: 'You are a helpful assistant that analyzes dates and their relevance to specific business niches. Return only a JSON object with a "dates" array containing relevant dates.'
           },
           {
             role: 'user',
-            content: `Please analyze these dates and return only the ones that are relevant to these niches: ${translatedNiches.join(', ')}. 
-            Here are the dates: ${JSON.stringify(datesForGPT)}. 
-            Return the response as a JSON array with objects containing: date, title, category, and description.
-            Response must be in valid JSON format.`
+            content: `Analyze these dates and return only those relevant to these niches: ${translatedNiches.join(', ')}. 
+            Dates: ${JSON.stringify(datesForGPT)}
+            Return a JSON object with a "dates" array containing objects with: date, title, category (always "commemorative"), and description.`
           }
         ],
         response_format: { type: "json_object" }
@@ -101,9 +99,10 @@ serve(async (req) => {
     });
 
     if (!gptResponse.ok) {
-      const errorData = await gptResponse.json();
-      console.error("[Main] OpenAI API error:", errorData);
-      throw new Error(`OpenAI API error: ${gptResponse.status} - ${JSON.stringify(errorData)}`);
+      console.error("[Main] OpenAI API error status:", gptResponse.status);
+      const errorText = await gptResponse.text();
+      console.error("[Main] OpenAI API error response:", errorText);
+      throw new Error(`OpenAI API error: ${gptResponse.status}`);
     }
 
     const gptData = await gptResponse.json();
@@ -111,10 +110,20 @@ serve(async (req) => {
 
     let relevantDates = [];
     try {
-      relevantDates = JSON.parse(gptData.choices[0].message.content).dates;
+      // Ensure we have a valid response with dates array
+      if (gptData?.choices?.[0]?.message?.content) {
+        const parsedContent = JSON.parse(gptData.choices[0].message.content);
+        if (Array.isArray(parsedContent.dates)) {
+          relevantDates = parsedContent.dates;
+        } else {
+          console.error("[Main] Invalid GPT response format - dates is not an array:", parsedContent);
+          relevantDates = [];
+        }
+      }
     } catch (error) {
       console.error("[Main] Error parsing GPT response:", error);
-      throw new Error('Failed to parse GPT response');
+      console.error("[Main] Raw GPT response content:", gptData?.choices?.[0]?.message?.content);
+      relevantDates = [];
     }
 
     // Adiciona datas gerais importantes
@@ -131,11 +140,11 @@ serve(async (req) => {
     }).map(date => ({
       date: date.data,
       title: date.descrição || '',
-      category: date.tipo?.toLowerCase() || 'commemorative',
+      category: 'commemorative',
       description: date.descrição || ''
     }));
 
-    // Combina e remove duplicatas
+    // Combina as datas e remove duplicatas
     const allDates = [...generalDates, ...relevantDates];
     const uniqueDates = Array.from(
       new Map(allDates.map(date => [date.date, date])).values()
