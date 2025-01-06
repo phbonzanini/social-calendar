@@ -58,10 +58,8 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
 
       if (error) throw error;
 
-      // Cast the data to unknown first, then to the correct type
       const rawData = data as unknown as Tables<"datas_2025">[];
       
-      // Transform the data to match our CommemorativeDate type
       return rawData.map(item => ({
         data: item.data,
         descricao: item.descrição
@@ -154,7 +152,11 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
                       <SelectValue placeholder="Selecione uma data comemorativa" />
                     </SelectTrigger>
                   </FormControl>
-                  <SelectContent className="max-h-[300px]">
+                  <SelectContent 
+                    position="item-aligned" 
+                    className="max-h-[300px] bg-white border border-neutral-200 shadow-lg overflow-y-auto"
+                    side="top"
+                  >
                     {commemorativeDates?.map((date) => (
                       <SelectItem 
                         key={`${date.data}-${date.descricao}`} 
