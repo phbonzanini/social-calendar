@@ -32,19 +32,8 @@ export const fetchDatesForNiches = async (niches: string[]): Promise<CalendarDat
       return [];
     }
 
-    const mappedDates = data.dates
-      .filter(date => date && typeof date === 'object')
-      .map((date: any) => ({
-        date: date.date || '',
-        title: date.title || '',
-        category: (date.category && typeof date.category === 'string' 
-          ? date.category.toLowerCase() 
-          : 'commemorative') as CalendarDate['category'],
-        description: date.description || ''
-      }));
-
-    console.log("Datas encontradas:", mappedDates);
-    return mappedDates;
+    console.log("Datas encontradas:", data.dates);
+    return data.dates;
 
   } catch (error) {
     console.error("Erro ao buscar datas:", error);

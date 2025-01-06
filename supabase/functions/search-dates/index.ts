@@ -2,18 +2,22 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { corsHeaders } from './cors.ts';
-import { analyzeRelevantDates } from './openaiClient.ts';
-import { 
-  filterGeneralDates, 
-  filterDatesByNiches, 
-  formatDatesForPrompt,
-  translateNiches 
-} from './dateProcessor.ts';
 
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-);
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+const nicheMapping: Record<string, string> = {
+  'education': 'educação',
+  'fashion': 'moda',
+  'healthcare': 'saúde',
+  'finance': 'finanças',
+  'gastronomy': 'gastronomia',
+  'logistics': 'logística',
+  'industry': 'indústria',
+  'tourism': 'turismo'
+};
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -24,7 +28,20 @@ serve(async (req) => {
     const { niches } = await req.json();
     console.log("[Main] Received niches:", niches);
 
-    // Busca datas do Supabase
+    if (!niches || !Array.isArray(niches) || niches.length === 0) {
+      throw new Error('No niches provided');
+    }
+
+    // Traduz os nichos para português
+    const translatedNiches = niches.map(niche => {
+      const translated = nicheMapping[niche]?.toLowerCase();
+      console.log(`[Main] Translating niche ${niche} to ${translated}`);
+      return translated || niche.toLowerCase();
+    });
+
+    console.log("[Main] Translated niches:", translatedNiches);
+
+    // Busca todas as datas do Supabase
     const { data: dates, error: dbError } = await supabase
       .from('datas_2025')
       .select('*');
@@ -44,43 +61,60 @@ serve(async (req) => {
 
     console.log("[Main] Total dates from database:", dates.length);
 
-    // Filtra datas pelos nichos
-    const filteredDates = filterDatesByNiches(dates, niches);
-    console.log("[Main] Filtered dates:", filteredDates.length);
+    // Filtra datas gerais importantes
+    const generalDates = dates.filter(date => {
+      const description = date.descrição?.toLowerCase() || '';
+      return (
+        description.includes('dia das mães') ||
+        description.includes('dia dos pais') ||
+        description.includes('natal') ||
+        description.includes('ano novo') ||
+        description.includes('dia do cliente') ||
+        description.includes('black friday')
+      );
+    });
 
-    // Pega datas comemorativas gerais
-    const generalDates = filterGeneralDates(dates);
+    // Filtra datas específicas do nicho
+    const nicheDates = dates.filter(date => {
+      const dateNiches = [
+        date['nicho 1']?.toLowerCase(),
+        date['nicho 2']?.toLowerCase(),
+        date['nicho 3']?.toLowerCase()
+      ].filter(Boolean);
+
+      console.log(`[Main] Checking date niches for date ${date.data}:`, dateNiches);
+
+      return translatedNiches.some(niche => 
+        dateNiches.some(dateNiche => {
+          const matches = dateNiche.includes(niche);
+          if (matches) {
+            console.log(`[Main] Match found for date ${date.data}: ${dateNiche} includes ${niche}`);
+          }
+          return matches;
+        })
+      );
+    });
+
     console.log("[Main] Found general dates:", generalDates.length);
+    console.log("[Main] Found niche-specific dates:", nicheDates.length);
 
-    // Prepara as datas para análise do GPT
-    const datesPrompt = formatDatesForPrompt(filteredDates);
-
-    // Chama OpenAI para análise
-    const gptResult = await analyzeRelevantDates(datesPrompt);
-    console.log("[Main] GPT Response:", gptResult);
-
-    let relevantDates = [];
-    try {
-      const parsedContent = JSON.parse(gptResult.choices[0].message.content);
-      relevantDates = parsedContent.dates || [];
-      console.log("[Main] Parsed relevant dates:", relevantDates);
-    } catch (error) {
-      console.error("[Main] Error parsing GPT response:", error);
-      throw new Error('Failed to parse OpenAI response as JSON');
-    }
-
-    // Formata as datas para o formato esperado
-    const formattedDates = [...generalDates, ...filteredDates].map(date => ({
+    // Combina e formata todas as datas
+    const allDates = [...generalDates, ...nicheDates].map(date => ({
       date: date.data?.split('T')[0] || '',
       title: date.descrição || '',
       category: date.tipo?.toLowerCase() || 'commemorative',
       description: date.descrição || ''
     }));
 
-    console.log("[Main] Final formatted dates:", formattedDates);
+    // Remove duplicatas baseado na data
+    const uniqueDates = Array.from(
+      new Map(allDates.map(date => [date.date, date])).values()
+    );
+
+    console.log("[Main] Final unique dates:", uniqueDates.length);
 
     return new Response(
-      JSON.stringify({ dates: formattedDates }),
+      JSON.stringify({ dates: uniqueDates }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
