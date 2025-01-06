@@ -14,7 +14,6 @@ const openAIApiKey = Deno.env.get('OPENAI_API_KEY')!;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Define nicheMapping here to fix the error
 const nicheMapping: Record<string, string> = {
   'education': 'educação',
   'fashion': 'moda',
@@ -27,7 +26,7 @@ const nicheMapping: Record<string, string> = {
 };
 
 const MAX_RETRIES = 3;
-const INITIAL_RETRY_DELAY = 2000; // 2 seconds
+const INITIAL_RETRY_DELAY = 1000; // 1 second
 
 async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any> {
   try {
@@ -40,7 +39,7 @@ async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any>
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini', // Using the faster model to reduce rate limits
         messages: [
           { 
             role: 'system', 
@@ -48,6 +47,7 @@ async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any>
           },
           { role: 'user', content: prompt }
         ],
+        temperature: 0.3, // Lower temperature for more consistent results
         response_format: { type: "json_object" }
       }),
     });
@@ -68,6 +68,7 @@ async function callOpenAIWithRetry(prompt: string, retryCount = 0): Promise<any>
     }
 
     const data = await response.json();
+    console.log('[OpenAI] Response received:', data);
     return JSON.parse(data.choices[0].message.content);
   } catch (error) {
     console.error('[OpenAI] Error:', error);
