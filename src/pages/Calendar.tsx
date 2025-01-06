@@ -38,9 +38,10 @@ const Calendar = () => {
 
   const handleDateSelect = (date: CalendarDate) => {
     setSelectedDates(prev => {
-      const isSelected = prev.some(d => d.date === date.date);
+      // Verifica se a data já existe usando a data e o título como chaves únicas
+      const isSelected = prev.some(d => d.date === date.date && d.title === date.title);
       if (isSelected) {
-        return prev.filter(d => d.date !== date.date);
+        return prev.filter(d => !(d.date === date.date && d.title === date.title));
       } else {
         return [...prev, date];
       }
@@ -99,7 +100,7 @@ const Calendar = () => {
             <div className="space-y-2">
               {selectedDates.map((date) => (
                 <div
-                  key={date.date}
+                  key={`${date.date}-${date.title}`}
                   className="flex items-center justify-between bg-primary/10 p-2 rounded-md"
                 >
                   <span>{date.title}</span>
@@ -152,7 +153,7 @@ const Calendar = () => {
                       key={`${date.date}-${index}`}
                       date={date}
                       index={index}
-                      isSelected={selectedDates.some(d => d.date === date.date)}
+                      isSelected={selectedDates.some(d => d.date === date.date && d.title === date.title)}
                       onSelect={() => handleDateSelect(date)}
                     />
                   ))}
@@ -166,7 +167,7 @@ const Calendar = () => {
                   key={`${date.date}-${index}`}
                   date={date}
                   index={index}
-                  isSelected={selectedDates.some(d => d.date === date.date)}
+                  isSelected={selectedDates.some(d => d.date === date.date && d.title === date.title)}
                   onSelect={() => handleDateSelect(date)}
                 />
               ))}
