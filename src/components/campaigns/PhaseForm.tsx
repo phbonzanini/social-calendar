@@ -1,30 +1,64 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-const formSchema = z.object({
-  nome: z.string().min(1, "Nome é obrigatório"),
-  data_inicio: z.string().min(1, "Data de início é obrigatória"),
-  data_fim: z.string().min(1, "Data de fim é obrigatória"),
-  objetivo: z.string().optional(),
-  descricao: z.string().optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
 
 interface PhaseFormProps {
   campaignId: number;
   onSubmit: (values: FormValues) => Promise<void>;
   defaultValues?: FormValues;
   isEditing?: boolean;
+  campaignStartDate: string;
+  campaignEndDate: string;
 }
 
-export const PhaseForm = ({ campaignId, onSubmit, defaultValues, isEditing = false }: PhaseFormProps) => {
+const createFormSchema = (campaignStartDate: string, campaignEndDate: string) => {
+  return z.object({
+    nome: z.string().min(1, "Nome é obrigatório"),
+    data_inicio: z.string()
+      .min(1, "Data de início é obrigatória")
+      .refine((date) => {
+        const phaseStart = new Date(date);
+        const campaignStart = new Date(campaignStartDate);
+        const campaignEnd = new Date(campaignEndDate);
+        return phaseStart >= campaignStart && phaseStart <= campaignEnd;
+      }, "A data de início deve estar dentro do período da campanha"),
+    data_fim: z.string()
+      .min(1, "Data de fim é obrigatória")
+      .refine((date) => {
+        const phaseEnd = new Date(date);
+        const campaignStart = new Date(campaignStartDate);
+        const campaignEnd = new Date(campaignEndDate);
+        return phaseEnd >= campaignStart && phaseEnd <= campaignEnd;
+      }, "A data de fim deve estar dentro do período da campanha"),
+    objetivo: z.string().optional(),
+    descricao: z.string().optional(),
+  }).refine((data) => {
+    const start = new Date(data.data_inicio);
+    const end = new Date(data.data_fim);
+    return start <= end;
+  }, {
+    message: "A data de fim deve ser igual ou posterior à data de início",
+    path: ["data_fim"],
+  });
+};
+
+type FormValues = z.infer<ReturnType<typeof createFormSchema>>;
+
+export const PhaseForm = ({ 
+  campaignId, 
+  onSubmit, 
+  defaultValues, 
+  isEditing = false,
+  campaignStartDate,
+  campaignEndDate,
+}: PhaseFormProps) => {
+  const formSchema = createFormSchema(campaignStartDate, campaignEndDate);
+  
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: defaultValues || {
@@ -56,6 +90,7 @@ export const PhaseForm = ({ campaignId, onSubmit, defaultValues, isEditing = fal
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -66,8 +101,14 @@ export const PhaseForm = ({ campaignId, onSubmit, defaultValues, isEditing = fal
               <FormItem>
                 <FormLabel>Data de Início</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input 
+                    type="date" 
+                    {...field}
+                    min={campaignStartDate}
+                    max={campaignEndDate}
+                  />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -78,8 +119,14 @@ export const PhaseForm = ({ campaignId, onSubmit, defaultValues, isEditing = fal
               <FormItem>
                 <FormLabel>Data de Fim</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input 
+                    type="date" 
+                    {...field}
+                    min={campaignStartDate}
+                    max={campaignEndDate}
+                  />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -92,6 +139,7 @@ export const PhaseForm = ({ campaignId, onSubmit, defaultValues, isEditing = fal
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -104,6 +152,7 @@ export const PhaseForm = ({ campaignId, onSubmit, defaultValues, isEditing = fal
                 <FormControl>
                   <Textarea {...field} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />

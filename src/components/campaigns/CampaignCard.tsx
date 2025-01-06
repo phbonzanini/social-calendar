@@ -183,7 +183,12 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
                     Nova Fase
                   </Button>
                 </DialogTrigger>
-                <PhaseForm campaignId={campaign.id} onSubmit={handleCreatePhase} />
+                <PhaseForm 
+                  campaignId={campaign.id} 
+                  onSubmit={handleCreatePhase}
+                  campaignStartDate={campaign.data_inicio}
+                  campaignEndDate={campaign.data_fim}
+                />
               </Dialog>
             </div>
 
@@ -255,6 +260,8 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
               descricao: selectedPhase.descricao || "",
             }}
             isEditing={true}
+            campaignStartDate={campaign.data_inicio}
+            campaignEndDate={campaign.data_fim}
           />
         )}
       </Dialog>
