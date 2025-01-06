@@ -10,11 +10,9 @@ import { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 
-interface CommemorativeDate {
-  data: string | null;
-  descrição: string | null;
-}
+type CommemorativeDate = Pick<Tables<"datas_2025">, "data" | "descrição">;
 
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
