@@ -48,7 +48,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
     },
   });
 
-  const { data: commemorativeDates } = useQuery<CommemorativeDate[]>({
+  const { data: commemorativeDates } = useQuery({
     queryKey: ["commemorative-dates"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -154,13 +154,16 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
                   </FormControl>
                   <SelectContent 
                     position="item-aligned" 
-                    className="max-h-[300px] bg-white border border-neutral-200 shadow-lg overflow-y-auto"
+                    className="max-h-[300px] bg-white border border-neutral-200 shadow-lg overflow-y-auto z-50 fixed"
                     side="top"
+                    align="start"
+                    sideOffset={5}
                   >
                     {commemorativeDates?.map((date) => (
                       <SelectItem 
                         key={`${date.data}-${date.descricao}`} 
                         value={date.descricao || ""}
+                        className="py-2 px-4 hover:bg-neutral-100"
                       >
                         {date.data} - {date.descricao}
                       </SelectItem>
