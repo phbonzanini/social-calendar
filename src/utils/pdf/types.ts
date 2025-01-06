@@ -19,4 +19,5 @@ export interface PDFConfig {
   titleFontSize: number;
   dateFontSize: number;
   contentFontSize: number;
+  headerFontSize: number;
 }
