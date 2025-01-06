@@ -13,23 +13,13 @@ export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[], customTitle: str
   pdf.setTextColor(155, 135, 245); // Primary color
   pdf.text(customTitle, pdf.internal.pageSize.width / 2, 15, { align: "center" });
 
-  // Add CSV download info
-  pdf.setFontSize(10);
-  pdf.setTextColor(100, 100, 100);
-  pdf.text(
-    "Para ver informações detalhadas das campanhas, use o botão 'Baixar CSV'",
-    pdf.internal.pageSize.width / 2,
-    25,
-    { align: "center" }
-  );
-
   const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
   const startX = 10;
-  const startY = 35;
+  const startY = 25; // Adjusted since we removed the CSV text
   const monthWidth = (pdf.internal.pageSize.width - 20) / 2; // 2 columns
   const monthHeight = 45; // Adjusted height for portrait
   const padding = 5;

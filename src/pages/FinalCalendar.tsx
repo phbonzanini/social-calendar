@@ -142,7 +142,7 @@ const FinalCalendar = () => {
               >
                 Voltar às Campanhas
               </Button>
-              <CalendarDownloadButtons campaigns={campaigns || []} months={months} />
+              <CalendarDownloadButtons campaigns={campaigns || []} />
             </div>
           </div>
         </div>
