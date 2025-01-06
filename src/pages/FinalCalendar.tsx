@@ -127,7 +127,7 @@ const FinalCalendar = () => {
         <Logo />
       </div>
 
-      <div className="max-w-[1600px] mx-auto pt-16">
+      <div className="max-w-[1600px] mx-auto">
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
             <h1 className="text-3xl font-bold text-neutral-dark">
