@@ -1,47 +1,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { corsHeaders } from './cors.ts';
+import { analyzeRelevantDates } from './openaiClient.ts';
+import { 
+  filterGeneralDates, 
+  filterDatesByNiches, 
+  formatDatesForPrompt,
+  translateNiches 
+} from './dateProcessor.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL') ?? '',
   Deno.env.get('SUPABASE_ANON_KEY') ?? ''
 );
 
-// Mapeamento de nichos em inglês para português
-const nicheMapping: Record<string, string> = {
-  'education': 'educação',
-  'fashion': 'moda',
-  'healthcare': 'saúde e bem-estar',
-  'finance': 'finanças',
-  'gastronomy': 'gastronomia',
-  'logistics': 'logística',
-  'industry': 'indústria',
-  'tourism': 'turismo'
-};
-
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const { niches } = await req.json();
-    console.log("Received niches:", niches);
-
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key not configured');
-    }
+    console.log("[Main] Received niches:", niches);
 
     // Traduz os nichos para português
-    const translatedNiches = niches.map(niche => nicheMapping[niche] || niche);
-    console.log("Translated niches:", translatedNiches);
+    const translatedNiches = translateNiches(niches);
+    console.log("[Main] Translated niches:", translatedNiches);
 
     // Busca datas do Supabase
     const { data: dates, error: dbError } = await supabase
@@ -49,117 +34,35 @@ serve(async (req) => {
       .select('*');
 
     if (dbError) {
-      console.error("Database error:", dbError);
+      console.error("[Main] Database error:", dbError);
       throw dbError;
     }
 
-    console.log("Total dates from database:", dates?.length);
+    console.log("[Main] Total dates from database:", dates?.length);
 
-    // Primeiro, vamos pegar todas as datas comemorativas gerais
-    const generalDates = dates.filter(date => {
-      const description = date.descrição?.toLowerCase() || '';
-      return (
-        description.includes('dia das mães') ||
-        description.includes('dia dos pais') ||
-        description.includes('natal') ||
-        description.includes('ano novo') ||
-        description.includes('dia do cliente') ||
-        description.includes('black friday')
-      );
-    });
-
-    console.log("Found general dates:", generalDates.length);
+    // Pega datas comemorativas gerais
+    const generalDates = filterGeneralDates(dates);
+    console.log("[Main] Found general dates:", generalDates.length);
 
     // Prepara as datas para análise do GPT
-    const datesToAnalyze = dates.filter(date => {
-      const dateNiches = [
-        date['nicho 1']?.toLowerCase(),
-        date['nicho 2']?.toLowerCase(),
-        date['nicho 3']?.toLowerCase()
-      ].filter(Boolean);
+    const datesToAnalyze = filterDatesByNiches(dates, translatedNiches);
+    console.log("[Main] Dates to analyze:", datesToAnalyze.length);
 
-      return translatedNiches.some(niche => 
-        dateNiches.some(dateNiche => dateNiche?.includes(niche.toLowerCase()))
-      );
-    });
+    // Prepara o prompt com as datas filtradas
+    const datesPrompt = formatDatesForPrompt(datesToAnalyze);
+    const fullPrompt = `Analise estas datas para os nichos: ${translatedNiches.join(", ")}.\n\nDatas para análise:\n${datesPrompt}`;
 
-    console.log("Dates to analyze:", datesToAnalyze.length);
+    // Chama OpenAI para análise
+    const gptResult = await analyzeRelevantDates(fullPrompt);
+    console.log("[Main] GPT Response:", gptResult);
 
-    // Prepara o prompt para o GPT
-    const prompt = {
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: "Você é um especialista em marketing que ajuda a identificar datas comemorativas relevantes para diferentes nichos de negócio. Analise as datas fornecidas e retorne apenas as que são realmente relevantes para os nichos especificados, incluindo uma breve explicação do por quê cada data é relevante."
-        },
-        {
-          role: "user",
-          content: `Analise estas datas para os nichos: ${translatedNiches.join(", ")}.\n\nDatas para análise:\n${
-            datesToAnalyze.map(date => 
-              `Data: ${date.data}\nDescrição: ${date.descrição}\nTipo: ${date.tipo}\nNichos: ${[date['nicho 1'], date['nicho 2'], date['nicho 3']].filter(Boolean).join(', ')}`
-            ).join('\n\n')
-          }`
-        }
-      ],
-      temperature: 0,
-      response_format: { type: "json_object" }
-    };
-
-    console.log("Sending request to OpenAI with prompt:", JSON.stringify(prompt, null, 2));
-
-    // Chama a API do OpenAI com retry
-    let openAIResponse;
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    while (retryCount < maxRetries) {
-      try {
-        openAIResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${openAIApiKey}`
-          },
-          body: JSON.stringify(prompt)
-        });
-
-        if (openAIResponse.ok) {
-          break;
-        }
-
-        console.error(`OpenAI request failed (attempt ${retryCount + 1}):`, await openAIResponse.text());
-        retryCount++;
-        
-        if (retryCount < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-        }
-      } catch (error) {
-        console.error(`OpenAI request error (attempt ${retryCount + 1}):`, error);
-        retryCount++;
-        
-        if (retryCount < maxRetries) {
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-        } else {
-          throw new Error('Failed to get response from OpenAI after multiple attempts');
-        }
-      }
-    }
-
-    if (!openAIResponse?.ok) {
-      throw new Error('Failed to get valid response from OpenAI');
-    }
-
-    const gptResult = await openAIResponse.json();
-    console.log("GPT Response:", gptResult);
-
-    let relevantDates;
+    let relevantDates = [];
     try {
       const parsedContent = JSON.parse(gptResult.choices[0].message.content);
       relevantDates = parsedContent.relevant_dates || [];
-      console.log("Parsed relevant dates:", relevantDates);
+      console.log("[Main] Parsed relevant dates:", relevantDates);
     } catch (error) {
-      console.error("Error parsing GPT response:", error);
+      console.error("[Main] Error parsing GPT response:", error);
       relevantDates = [];
     }
 
@@ -189,20 +92,15 @@ serve(async (req) => {
       };
     });
 
-    console.log("Final formatted dates:", formattedDates);
+    console.log("[Main] Final formatted dates:", formattedDates);
 
     return new Response(
       JSON.stringify({ dates: formattedDates }),
-      { 
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in search-dates function:', error);
+    console.error('[Main] Error in search-dates function:', error);
     return new Response(
       JSON.stringify({ 
         error: 'Failed to process request',
@@ -210,10 +108,7 @@ serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { 
-          ...corsHeaders,
-          'Content-Type': 'application/json'
-        }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
   }
