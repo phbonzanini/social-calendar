@@ -7,17 +7,10 @@ export interface DateEntry {
   'nicho 3'?: string;
 }
 
-export interface FormattedDate {
-  date: string;
-  title: string;
-  category: string;
-  description: string;
-}
-
 export const nicheMapping: Record<string, string> = {
   'education': 'educação',
   'fashion': 'moda',
-  'healthcare': 'saúde',  // Simplified to match database value
+  'healthcare': 'saúde',
   'finance': 'finanças',
   'gastronomy': 'gastronomia',
   'logistics': 'logística',
