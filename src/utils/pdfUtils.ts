@@ -106,57 +106,81 @@ const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
   pdf.setTextColor(155, 135, 245);
   pdf.text("Detalhes das Campanhas", pdf.internal.pageSize.width / 2, 15, { align: "center" });
 
-  // Reset position for campaign details
-  let detailY = 30;
+  // Setup column layout
   const pageWidth = pdf.internal.pageSize.width;
-  const maxWidth = pageWidth - 20;
+  const margin = 10;
+  const columnGap = 10;
+  const columnWidth = (pageWidth - (2 * margin) - (2 * columnGap)) / 3;
+  
+  let currentColumn = 0;
+  let detailY = 30;
+  const cardHeight = 45;
+  const maxY = pdf.internal.pageSize.height - 20;
 
-  campaigns.sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())
+  campaigns
+    .sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())
     .forEach(campaign => {
-      // Calculate card height based on content
-      const cardHeight = 45; // Fixed minimum height for all cards
+      // Calculate X position based on current column
+      const currentX = margin + (currentColumn * (columnWidth + columnGap));
 
-      // Check if we need to add a new page
-      if (detailY + cardHeight > pdf.internal.pageSize.height - 20) {
-        pdf.addPage('landscape');
-        pdf.setFillColor(251, 247, 255);
-        pdf.rect(0, 0, pageWidth, pdf.internal.pageSize.height, "F");
-        detailY = 30;
+      // Check if we need to move to next column or new page
+      if (detailY + cardHeight > maxY) {
+        if (currentColumn < 2) {
+          currentColumn++;
+          detailY = 30;
+        } else {
+          pdf.addPage('landscape');
+          pdf.setFillColor(251, 247, 255);
+          pdf.rect(0, 0, pageWidth, pdf.internal.pageSize.height, "F");
+          currentColumn = 0;
+          detailY = 30;
+        }
       }
 
       // Add white background card
       pdf.setFillColor(255, 255, 255);
-      pdf.roundedRect(10, detailY - 5, maxWidth, cardHeight, 3, 3, "F");
+      pdf.roundedRect(currentX, detailY - 5, columnWidth, cardHeight, 3, 3, "F");
 
       // Campaign name and dates
-      pdf.setFontSize(14);
+      pdf.setFontSize(12);
       pdf.setTextColor(155, 135, 245);
-      pdf.text(campaign.nome, 15, detailY + 5);
+      pdf.text(campaign.nome, currentX + 5, detailY + 5, {
+        maxWidth: columnWidth - 10
+      });
 
       pdf.setFontSize(10);
       pdf.setTextColor(142, 145, 150);
       const dateText = `${format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - ${format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR })}`;
-      pdf.text(dateText, 15, detailY + 12);
+      pdf.text(dateText, currentX + 5, detailY + 12, {
+        maxWidth: columnWidth - 10
+      });
 
       // Add details
       let textY = detailY + 20;
       pdf.setTextColor(0, 0, 0);
-      pdf.setFontSize(10);
+      pdf.setFontSize(9);
 
       if (campaign.objetivo) {
-        pdf.text(`Objetivo: ${campaign.objetivo}`, 15, textY);
+        pdf.text(`Objetivo: ${campaign.objetivo}`, currentX + 5, textY, {
+          maxWidth: columnWidth - 10
+        });
         textY += 7;
       }
 
       if (campaign.descricao) {
-        pdf.text(`Descrição: ${campaign.descricao}`, 15, textY);
+        pdf.text(`Descrição: ${campaign.descricao}`, currentX + 5, textY, {
+          maxWidth: columnWidth - 10
+        });
         textY += 7;
       }
 
       if (campaign.data_comemorativa) {
-        pdf.text(`Data Comemorativa: ${campaign.data_comemorativa}`, 15, textY);
+        pdf.text(`Data Comemorativa: ${campaign.data_comemorativa}`, currentX + 5, textY, {
+          maxWidth: columnWidth - 10
+        });
       }
 
-      detailY += cardHeight + 10;
+      // Move to next card position
+      detailY += cardHeight + 5;
     });
 };
