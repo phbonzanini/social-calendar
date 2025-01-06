@@ -15,18 +15,34 @@ export function filterGeneralDates(dates: DateEntry[]): DateEntry[] {
   });
 }
 
-export function filterDatesByNiches(dates: DateEntry[], translatedNiches: string[]): DateEntry[] {
-  return dates.filter(date => {
+export function filterDatesByNiches(dates: DateEntry[], niches: string[]): DateEntry[] {
+  console.log('[dateProcessor] Filtering dates for niches:', niches);
+  console.log('[dateProcessor] Total dates before filtering:', dates.length);
+
+  const filteredDates = dates.filter(date => {
     const dateNiches = [
       date['nicho 1']?.toLowerCase(),
       date['nicho 2']?.toLowerCase(),
       date['nicho 3']?.toLowerCase()
     ].filter(Boolean);
 
-    return translatedNiches.some(niche => 
-      dateNiches.some(dateNiche => dateNiche?.includes(niche.toLowerCase()))
-    );
+    console.log('[dateProcessor] Date niches:', dateNiches);
+
+    return niches.some(niche => {
+      const translated = nicheMapping[niche]?.toLowerCase() || niche.toLowerCase();
+      console.log(`[dateProcessor] Checking niche ${niche} (${translated})`);
+      return dateNiches.some(dateNiche => {
+        const matches = dateNiche.includes(translated);
+        if (matches) {
+          console.log(`[dateProcessor] Match found: ${dateNiche} includes ${translated}`);
+        }
+        return matches;
+      });
+    });
   });
+
+  console.log('[dateProcessor] Total dates after filtering:', filteredDates.length);
+  return filteredDates;
 }
 
 export function formatDatesForPrompt(dates: DateEntry[]): string {
@@ -42,7 +58,7 @@ export function formatDatesForPrompt(dates: DateEntry[]): string {
 export function translateNiches(niches: string[]): string[] {
   return niches.map(niche => {
     const translated = nicheMapping[niche]?.toLowerCase();
-    console.log(`[Niche] Translating ${niche} to ${translated}`);
+    console.log(`[dateProcessor] Translating ${niche} to ${translated}`);
     return translated || niche.toLowerCase();
   });
 }

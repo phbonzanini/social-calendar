@@ -24,10 +24,6 @@ serve(async (req) => {
     const { niches } = await req.json();
     console.log("[Main] Received niches:", niches);
 
-    // Traduz os nichos para português
-    const translatedNiches = translateNiches(niches);
-    console.log("[Main] Translated niches:", translatedNiches);
-
     // Busca datas do Supabase
     const { data: dates, error: dbError } = await supabase
       .from('datas_2025')
@@ -38,18 +34,26 @@ serve(async (req) => {
       throw dbError;
     }
 
-    console.log("[Main] Total dates from database:", dates?.length);
+    if (!dates || dates.length === 0) {
+      console.log("[Main] No dates found in database");
+      return new Response(
+        JSON.stringify({ dates: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log("[Main] Total dates from database:", dates.length);
+
+    // Filtra datas pelos nichos
+    const filteredDates = filterDatesByNiches(dates, niches);
+    console.log("[Main] Filtered dates:", filteredDates.length);
 
     // Pega datas comemorativas gerais
     const generalDates = filterGeneralDates(dates);
     console.log("[Main] Found general dates:", generalDates.length);
 
     // Prepara as datas para análise do GPT
-    const datesToAnalyze = filterDatesByNiches(dates, translatedNiches);
-    console.log("[Main] Dates to analyze:", datesToAnalyze.length);
-
-    // Prepara o prompt com as datas filtradas
-    const datesPrompt = formatDatesForPrompt(datesToAnalyze);
+    const datesPrompt = formatDatesForPrompt(filteredDates);
 
     // Chama OpenAI para análise
     const gptResult = await analyzeRelevantDates(datesPrompt);
@@ -65,31 +69,13 @@ serve(async (req) => {
       throw new Error('Failed to parse OpenAI response as JSON');
     }
 
-    // Combina as datas relevantes com as datas comemorativas gerais
-    const allRelevantDates = [...generalDates, ...datesToAnalyze.filter(date => 
-      relevantDates.some((relevantDate: any) => 
-        relevantDate.date === date.data?.split('T')[0]
-      )
-    )];
-
-    // Remove duplicatas e formata as datas
-    const uniqueDates = Array.from(new Set(allRelevantDates.map(date => 
-      JSON.stringify({ date: date.data, title: date.descrição })
-    ))).map(str => JSON.parse(str));
-
     // Formata as datas para o formato esperado
-    const formattedDates = uniqueDates.map(({ date, title }) => {
-      const originalDate = allRelevantDates.find(d => 
-        d.data === date && d.descrição === title
-      );
-
-      return {
-        date: date?.split('T')[0] || '',
-        title: title || '',
-        category: originalDate?.tipo?.toLowerCase() || 'commemorative',
-        description: title || ''
-      };
-    });
+    const formattedDates = [...generalDates, ...filteredDates].map(date => ({
+      date: date.data?.split('T')[0] || '',
+      title: date.descrição || '',
+      category: date.tipo?.toLowerCase() || 'commemorative',
+      description: date.descrição || ''
+    }));
 
     console.log("[Main] Final formatted dates:", formattedDates);
 
