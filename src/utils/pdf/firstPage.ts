@@ -4,73 +4,73 @@ import { ptBR } from "date-fns/locale";
 import { Campaign } from "./types";
 
 export const addFirstPage = (pdf: jsPDF, campaigns: Campaign[], months: string[]) => {
-  // Set initial position for the grid
-  let currentX = 10;
-  let currentY = 20;
-  const columnWidth = 90;
-  const rowHeight = 65;
-  const margin = 5;
-
-  // Set background color for first page
   pdf.setFillColor(251, 247, 255);
   pdf.rect(0, 0, pdf.internal.pageSize.width, pdf.internal.pageSize.height, "F");
 
   // Add title
   pdf.setFontSize(24);
   pdf.setTextColor(155, 135, 245);
-  pdf.text("Calendário de Campanhas 2025", pdf.internal.pageSize.width / 2, 15, { align: "center" });
+  pdf.text("Calendário de Campanhas 2025", pdf.internal.pageSize.width / 2, 20, { align: "center" });
 
-  // Create a grid of months (4x3)
-  months.forEach((month, monthIndex) => {
-    if (monthIndex > 0 && monthIndex % 3 === 0) {
-      currentY += rowHeight + margin;
-      currentX = 10;
-    }
+  const startX = 10;
+  const startY = 40;
+  const monthWidth = (pdf.internal.pageSize.width - 20) / 4;
+  const monthHeight = (pdf.internal.pageSize.height - startY - 10) / 3;
+  const daySize = (monthWidth - 20) / 7;
+  const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
-    // Add month card with white background
-    pdf.setFillColor(255, 255, 255);
-    pdf.roundedRect(currentX, currentY, columnWidth, rowHeight, 3, 3, "F");
+  months.forEach((month, index) => {
+    const col = index % 4;
+    const row = Math.floor(index / 4);
+    const x = startX + (col * monthWidth);
+    const y = startY + (row * monthHeight);
 
-    // Add month header with purple background
-    pdf.setFillColor(155, 135, 245);
-    pdf.roundedRect(currentX, currentY, columnWidth, 8, 3, 3, "F");
+    // Add month name
+    pdf.setFontSize(14);
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(month, x + 10, y + 15);
 
-    // Month name
-    pdf.setFontSize(12);
-    pdf.setTextColor(255, 255, 255);
-    pdf.text(month, currentX + 5, currentY + 6);
-
-    // Get campaigns for this month
-    const monthCampaigns = campaigns?.filter(campaign => {
-      const startDate = new Date(campaign.data_inicio);
-      return startDate.getMonth() === monthIndex && startDate.getFullYear() === 2025;
+    // Add weekday headers
+    pdf.setFontSize(8);
+    weekDays.forEach((day, dayIndex) => {
+      pdf.text(day, x + 10 + (dayIndex * daySize), y + 25);
     });
 
-    // Add campaigns under month
-    if (monthCampaigns && monthCampaigns.length > 0) {
-      let campaignY = currentY + 12;
-      pdf.setFontSize(9);
-      
-      monthCampaigns.forEach((campaign, idx) => {
-        if (idx < 4) {
-          pdf.setTextColor(155, 135, 245);
-          pdf.text(campaign.nome, currentX + 5, campaignY);
-          
-          pdf.setTextColor(142, 145, 150);
-          pdf.text(
-            `${format(new Date(campaign.data_inicio), "dd/MM", { locale: ptBR })} - ${format(new Date(campaign.data_fim), "dd/MM", { locale: ptBR })}`,
-            currentX + 5,
-            campaignY + 4
-          );
-          
-          campaignY += 10;
-        } else if (idx === 4) {
-          pdf.setTextColor(142, 145, 150);
-          pdf.text(`+ ${monthCampaigns.length - 4} outras campanhas`, currentX + 5, campaignY);
-        }
-      });
-    }
+    // Calculate first day and number of days in month
+    const date = new Date(2025, index, 1);
+    const firstDay = date.getDay();
+    const daysInMonth = new Date(2025, index + 1, 0).getDate();
 
-    currentX += columnWidth + margin;
+    // Add days
+    let currentDay = 1;
+    const rows = Math.ceil((firstDay + daysInMonth) / 7);
+
+    for (let week = 0; week < rows; week++) {
+      for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+        const dayNumber = week * 7 + dayOfWeek - firstDay + 1;
+        const xPos = x + 10 + (dayOfWeek * daySize);
+        const yPos = y + 35 + (week * 10);
+
+        if (dayNumber > 0 && dayNumber <= daysInMonth) {
+          const currentDate = new Date(2025, index, dayNumber);
+          const hasCampaign = campaigns.some(campaign => {
+            const startDate = new Date(campaign.data_inicio);
+            const endDate = new Date(campaign.data_fim);
+            return currentDate >= startDate && currentDate <= endDate;
+          });
+
+          if (hasCampaign) {
+            // Draw circle for campaign days
+            pdf.setFillColor(155, 135, 245);
+            pdf.circle(xPos + 2, yPos - 2, 3, 'F');
+            pdf.setTextColor(255, 255, 255);
+          } else {
+            pdf.setTextColor(0, 0, 0);
+          }
+
+          pdf.text(dayNumber.toString(), xPos, yPos);
+        }
+      }
+    }
   });
 };

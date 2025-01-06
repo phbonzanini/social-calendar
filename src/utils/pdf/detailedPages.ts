@@ -32,10 +32,12 @@ export const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
   campaigns
     .sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())
     .forEach(campaign => {
+      // Calculate total height needed for this campaign card
       pdf.setFontSize(config.titleFontSize);
       const titleLines = pdf.splitTextToSize(campaign.nome, config.columnWidth - 10).length;
       
       pdf.setFontSize(config.contentFontSize);
+      const dateText = `${format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - ${format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR })}`;
       const objetivoLines = campaign.objetivo ? 
         pdf.splitTextToSize(`Objetivo: ${campaign.objetivo}`, config.columnWidth - 10).length : 0;
       const descricaoLines = campaign.descricao ? 
@@ -45,14 +47,13 @@ export const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
 
       const cardHeight = config.baseCardPadding + 
         (titleLines * config.lineHeight) +
-        (config.lineHeight) +
+        (2 * config.lineHeight) + // Date takes up 2 lines
         (objetivoLines * config.lineHeight) +
         (descricaoLines * config.lineHeight) +
         (ofertaLines * config.lineHeight) +
         config.baseCardPadding;
 
-      const currentX = config.margin + (currentColumn * (config.columnWidth + config.columnGap));
-
+      // Check if we need to move to next column or page
       if (detailY + cardHeight > config.maxY) {
         if (currentColumn < 2) {
           currentColumn++;
@@ -66,26 +67,32 @@ export const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
         }
       }
 
+      const currentX = config.margin + (currentColumn * (config.columnWidth + config.columnGap));
+
+      // Draw card background
       pdf.setFillColor(255, 255, 255);
       pdf.roundedRect(currentX, detailY - 5, config.columnWidth, cardHeight, 3, 3, "F");
 
+      // Add campaign title
       pdf.setFontSize(config.titleFontSize);
       pdf.setTextColor(155, 135, 245);
-      const titleY = pdf.splitTextToSize(campaign.nome, config.columnWidth - 10)
+      let currentY = detailY + 5;
+      currentY = pdf.splitTextToSize(campaign.nome, config.columnWidth - 10)
         .reduce((y, line) => {
           pdf.text(line, currentX + 5, y);
           return y + config.lineHeight;
-        }, detailY + 5);
+        }, currentY);
 
+      // Add campaign dates
       pdf.setFontSize(config.dateFontSize);
       pdf.setTextColor(142, 145, 150);
-      const dateText = `${format(new Date(campaign.data_inicio), "dd/MM/yyyy", { locale: ptBR })} - ${format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR })}`;
-      let currentY = titleY + 2;
+      currentY += 2;
       pdf.text(dateText, currentX + 5, currentY);
+      currentY += config.lineHeight * 1.5;
 
+      // Add campaign details
       pdf.setTextColor(0, 0, 0);
       pdf.setFontSize(config.contentFontSize);
-      currentY += config.lineHeight;
 
       if (campaign.objetivo) {
         currentY = pdf.splitTextToSize(`Objetivo: ${campaign.objetivo}`, config.columnWidth - 10)
@@ -93,6 +100,7 @@ export const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
             pdf.text(line, currentX + 5, y);
             return y + config.lineHeight;
           }, currentY);
+        currentY += config.lineHeight * 0.5;
       }
 
       if (campaign.descricao) {
@@ -101,14 +109,15 @@ export const addDetailedPages = (pdf: jsPDF, campaigns: Campaign[]) => {
             pdf.text(line, currentX + 5, y);
             return y + config.lineHeight;
           }, currentY);
+        currentY += config.lineHeight * 0.5;
       }
 
       if (campaign.oferta) {
-        pdf.splitTextToSize(`Oferta: ${campaign.oferta}`, config.columnWidth - 10)
-          .forEach(line => {
-            pdf.text(line, currentX + 5, currentY);
-            currentY += config.lineHeight;
-          });
+        currentY = pdf.splitTextToSize(`Oferta: ${campaign.oferta}`, config.columnWidth - 10)
+          .reduce((y, line) => {
+            pdf.text(line, currentX + 5, y);
+            return y + config.lineHeight;
+          }, currentY);
       }
 
       detailY += cardHeight + 5;
