@@ -12,7 +12,7 @@ interface Campaign {
   data_fim: string;
   objetivo?: string;
   descricao?: string;
-  data_comemorativa?: string;
+  oferta?: string;
 }
 
 interface CalendarDownloadButtonsProps {
@@ -41,7 +41,7 @@ export const CalendarDownloadButtons = ({ campaigns, months }: CalendarDownloadB
       "Data Fim",
       "Objetivo",
       "Descrição",
-      "Data Comemorativa"
+      "Oferta"
     ];
     
     const rows = months.map(month => {
@@ -59,7 +59,7 @@ export const CalendarDownloadButtons = ({ campaigns, months }: CalendarDownloadB
         format(new Date(campaign.data_fim), "dd/MM/yyyy", { locale: ptBR }),
         campaign.objetivo || "",
         campaign.descricao || "",
-        campaign.data_comemorativa || ""
+        campaign.oferta || ""
       ]);
     }).flat();
 
