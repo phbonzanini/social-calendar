@@ -53,16 +53,16 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
     queryFn: async () => {
       const { data, error } = await supabase
         .from("datas_2025")
-        .select("data, descrição")
+        .select("*")
         .order("data", { ascending: true });
 
       if (error) throw error;
 
-      // First assert the type of data as Tables<"datas_2025">[]
-      const typedData = data as Tables<"datas_2025">[];
+      // Cast the data to unknown first, then to the correct type
+      const rawData = data as unknown as Tables<"datas_2025">[];
       
-      // Then transform it to match our CommemorativeDate type
-      return typedData.map(item => ({
+      // Transform the data to match our CommemorativeDate type
+      return rawData.map(item => ({
         data: item.data,
         descricao: item.descrição
       }));
