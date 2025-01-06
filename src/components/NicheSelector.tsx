@@ -28,7 +28,11 @@ export const niches = [
   { value: "tourism", label: "Turismo" }
 ];
 
-export const NicheSelector = () => {
+interface NicheSelectorProps {
+  returnPath?: string;
+}
+
+export const NicheSelector = ({ returnPath = "/calendar" }: NicheSelectorProps) => {
   const [open, setOpen] = useState(false);
   const [selectedNiches, setSelectedNiches] = useState<string[]>([]);
   const navigate = useNavigate();
@@ -47,7 +51,7 @@ export const NicheSelector = () => {
       return;
     }
 
-    navigate("/calendar", { state: { selectedNiches } });
+    navigate(returnPath, { state: { selectedNiches } });
   };
 
   return (

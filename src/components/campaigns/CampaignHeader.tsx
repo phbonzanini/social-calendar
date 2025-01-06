@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
+import { Plus, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CampaignForm } from "./CampaignForm";
 import { Campaign } from "@/types/campaign";
@@ -18,15 +18,7 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
         <h1 className="text-3xl font-bold text-neutral-dark">
           Gerenciar Campanhas
         </h1>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => navigate("/calendar")}
-            variant="outline"
-            size="sm"
-            className="text-neutral-dark bg-white hover:text-neutral-dark hover:bg-neutral-light"
-          >
-            Voltar ao Calendário
-          </Button>
+        <div className="flex flex-wrap gap-2">
           <Dialog>
             <DialogTrigger asChild>
               <Button size="sm" className="flex items-center gap-2 bg-white text-neutral-dark hover:bg-neutral-light">
@@ -36,6 +28,14 @@ export const CampaignHeader = ({ onSubmit }: CampaignHeaderProps) => {
             </DialogTrigger>
             <CampaignForm onSubmit={onSubmit} />
           </Dialog>
+          <Button
+            onClick={() => navigate("/calendar")}
+            size="sm"
+            className="flex items-center gap-2 bg-primary text-white hover:bg-primary-dark"
+          >
+            <Calendar className="h-4 w-4" />
+            Procurar datas sazonais
+          </Button>
           <Button
             onClick={() => navigate("/final-calendar")}
             variant="outline"

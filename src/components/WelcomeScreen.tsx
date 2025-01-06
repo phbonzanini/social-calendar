@@ -28,7 +28,7 @@ export const WelcomeScreen = () => {
         </p>
         <div className="flex flex-col items-center gap-2">
           <Button
-            onClick={() => navigate("/select-niche")}
+            onClick={() => navigate("/campaigns")}
             className="bg-primary hover:bg-primary-dark text-white px-8 py-6 rounded-lg text-lg transition-all hover:shadow-lg"
           >
             Começar Agora

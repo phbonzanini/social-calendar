@@ -1,7 +1,11 @@
 import { motion } from "framer-motion";
 import { NicheSelector } from "@/components/NicheSelector";
+import { useLocation } from "react-router-dom";
 
 const SelectNiche = () => {
+  const location = useLocation();
+  const returnPath = location.state?.returnTo || "/calendar";
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -20,7 +24,7 @@ const SelectNiche = () => {
         <p className="text-neutral mb-6">
           Escolha um ou mais nichos para ver datas relevantes para seu negócio
         </p>
-        <NicheSelector />
+        <NicheSelector returnPath={returnPath} />
       </motion.div>
     </motion.div>
   );

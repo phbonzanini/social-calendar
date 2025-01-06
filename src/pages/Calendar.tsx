@@ -21,6 +21,13 @@ const Calendar = () => {
 
   const selectedNiches = getNiches(location.state, navigate);
 
+  useEffect(() => {
+    // If no niches are selected, redirect to niche selection
+    if (!location.state?.selectedNiches || location.state.selectedNiches.length === 0) {
+      navigate("/select-niche", { state: { returnTo: "/calendar" } });
+    }
+  }, [location.state, navigate]);
+
   const { data: dates, isLoading, error } = useQuery({
     queryKey: ["calendar-dates", selectedNiches],
     queryFn: () => fetchDatesForNiches(selectedNiches),
