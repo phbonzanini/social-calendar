@@ -14,7 +14,8 @@ const Campaigns = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const calendarId = searchParams.get("calendar");
+  const calendarIdParam = searchParams.get("calendar");
+  const calendarId = calendarIdParam ? parseInt(calendarIdParam) : null;
 
   const { data: calendar } = useQuery({
     queryKey: ["calendar", calendarId],
@@ -75,7 +76,7 @@ const Campaigns = () => {
         descricao: values.descricao || null,
         oferta: values.oferta || null,
         id_user: session.session.user.id,
-        id_calendario: calendarId ? parseInt(calendarId) : null,
+        id_calendario: calendarId || null,
       };
 
       const { error } = await supabase
