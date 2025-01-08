@@ -48,6 +48,19 @@ export default function Calendar() {
       return;
     }
 
+    // Check if calendar already exists for this year
+    const { data: existingCalendar } = await supabase
+      .from("calendarios")
+      .select("id")
+      .eq("ano", ano)
+      .eq("id_user", user.id)
+      .single();
+
+    if (existingCalendar) {
+      toast.error("Você já tem um calendário para este ano");
+      return;
+    }
+
     const { error } = await supabase.from("calendarios").insert([
       {
         nome,
