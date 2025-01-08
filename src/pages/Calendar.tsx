@@ -41,10 +41,18 @@ export default function Calendar() {
       return;
     }
 
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error("Usuário não autenticado");
+      return;
+    }
+
     const { error } = await supabase.from("calendarios").insert([
       {
         nome,
         ano,
+        id_user: user.id
       },
     ]);
 
@@ -54,6 +62,7 @@ export default function Calendar() {
       } else {
         toast.error("Erro ao criar calendário");
       }
+      console.error("Error creating calendar:", error);
       return;
     }
 
