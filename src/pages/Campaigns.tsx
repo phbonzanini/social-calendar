@@ -45,17 +45,15 @@ const Campaigns = () => {
       let query = supabase
         .from("campanhas_marketing")
         .select("*")
+        .eq("id_calendario", calendarId)
         .order("data_inicio", { ascending: true });
-
-      if (calendarId) {
-        query = query.eq("id_calendario", calendarId);
-      }
 
       const { data, error } = await query;
 
       if (error) throw error;
       return data as Campaign[];
     },
+    enabled: !!calendarId,
   });
 
   // Use the automatic campaign creator hook
@@ -76,7 +74,7 @@ const Campaigns = () => {
         descricao: values.descricao || null,
         oferta: values.oferta || null,
         id_user: session.session.user.id,
-        id_calendario: calendarId || null,
+        id_calendario: calendarId,
       };
 
       const { error } = await supabase
@@ -100,6 +98,16 @@ const Campaigns = () => {
       });
     }
   };
+
+  if (!calendarId) {
+    return (
+      <div className="p-6">
+        <p className="text-center text-muted-foreground">
+          Selecione um calendário para ver suas campanhas.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <motion.div

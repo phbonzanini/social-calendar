@@ -71,7 +71,7 @@ export type Database = {
           data_inicio: string
           descricao: string | null
           id: number
-          id_calendario: number | null
+          id_calendario: number
           id_user: string | null
           is_from_commemorative: boolean | null
           nome: string
@@ -85,7 +85,7 @@ export type Database = {
           data_inicio: string
           descricao?: string | null
           id?: number
-          id_calendario?: number | null
+          id_calendario: number
           id_user?: string | null
           is_from_commemorative?: boolean | null
           nome: string
@@ -99,7 +99,7 @@ export type Database = {
           data_inicio?: string
           descricao?: string | null
           id?: number
-          id_calendario?: number | null
+          id_calendario?: number
           id_user?: string | null
           is_from_commemorative?: boolean | null
           nome?: string
