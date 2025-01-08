@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Calendar {
   id: number;
@@ -15,6 +16,7 @@ interface Calendar {
 }
 
 export default function Calendar() {
+  const navigate = useNavigate();
   const [nome, setNome] = useState("");
   const [ano, setAno] = useState(new Date().getFullYear());
 
@@ -85,6 +87,10 @@ export default function Calendar() {
     refetch();
   };
 
+  const handleCalendarClick = (calendarId: number) => {
+    navigate(`/campaigns?calendar=${calendarId}`);
+  };
+
   return (
     <div className="container py-8">
       <h1 className="text-2xl font-bold mb-8">Calendários</h1>
@@ -125,7 +131,11 @@ export default function Calendar() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {calendars?.map((calendar) => (
-                <Card key={calendar.id} className="p-6">
+                <Card 
+                  key={calendar.id} 
+                  className="p-6 cursor-pointer hover:bg-neutral-50 transition-colors"
+                  onClick={() => handleCalendarClick(calendar.id)}
+                >
                   <h3 className="font-semibold">{calendar.nome}</h3>
                   <p className="text-sm text-muted-foreground">
                     Ano: {calendar.ano}
