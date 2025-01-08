@@ -49,12 +49,17 @@ export default function Calendar() {
     }
 
     // Check if calendar already exists for this year
-    const { data: existingCalendar } = await supabase
+    const { data: existingCalendar, error: checkError } = await supabase
       .from("calendarios")
       .select("id")
       .eq("ano", ano)
       .eq("id_user", user.id)
-      .single();
+      .maybeSingle();
+
+    if (checkError) {
+      toast.error("Erro ao verificar calendário existente");
+      return;
+    }
 
     if (existingCalendar) {
       toast.error("Você já tem um calendário para este ano");
@@ -70,11 +75,7 @@ export default function Calendar() {
     ]);
 
     if (error) {
-      if (error.code === "23505") {
-        toast.error("Você já tem um calendário para este ano");
-      } else {
-        toast.error("Erro ao criar calendário");
-      }
+      toast.error("Erro ao criar calendário");
       console.error("Error creating calendar:", error);
       return;
     }
