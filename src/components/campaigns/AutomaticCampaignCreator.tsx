@@ -1,18 +1,27 @@
 import { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { CalendarDate } from "@/services/dateService";
 
 export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const calendarId = searchParams.get("calendar");
   const selectedDates = location.state?.selectedDates || [];
 
   useEffect(() => {
     const createCampaignsForSelectedDates = async () => {
       if (!selectedDates.length) return;
+      if (!calendarId) {
+        toast({
+          title: "Erro ao criar campanhas",
+          description: "É necessário selecionar um calendário primeiro.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       const { data: session } = await supabase.auth.getSession();
       if (!session.session?.user?.id) {
@@ -46,6 +55,7 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
             .eq("data_comemorativa", date.date)
             .eq("nome", date.title)
             .eq("id_user", session.session.user.id)
+            .eq("id_calendario", parseInt(calendarId))
             .eq("is_from_commemorative", true);
 
           // Only create if no campaign exists for this date and title
@@ -58,7 +68,8 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
               descricao: date.description,
               data_comemorativa: date.date,
               id_user: session.session.user.id,
-              is_from_commemorative: true
+              is_from_commemorative: true,
+              id_calendario: parseInt(calendarId)
             };
 
             const { error } = await supabase
@@ -101,5 +112,5 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
     };
 
     createCampaignsForSelectedDates();
-  }, [selectedDates, toast, refetchCampaigns, navigate, location.pathname]);
+  }, [selectedDates, toast, refetchCampaigns, navigate, location.pathname, calendarId]);
 };
