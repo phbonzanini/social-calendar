@@ -64,20 +64,20 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => navigate("/campaigns")}
-                  tooltip="Campanhas"
+                  onClick={() => navigate("/seasonal-dates")}
+                  tooltip="Datas Sazonais"
                 >
                   <LayoutGrid className="h-4 w-4" />
-                  <span>Campanhas</span>
+                  <span>Datas Sazonais</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => navigate("/calendar")}
-                  tooltip="Calendário"
+                  tooltip="Calendários"
                 >
                   <Calendar className="h-4 w-4" />
-                  <span>Calendário</span>
+                  <span>Calendários</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

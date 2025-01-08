@@ -5,6 +5,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
 import SelectNiche from "./pages/SelectNiche";
+import SeasonalDates from "./pages/SeasonalDates";
 import Calendar from "./pages/Calendar";
 import Campaigns from "./pages/Campaigns";
 import FinalCalendar from "./pages/FinalCalendar";
@@ -46,6 +47,16 @@ export const AppRoutes = () => {
             element={
               isAuthenticated ? (
                 <SelectNiche />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+          <Route
+            path="/seasonal-dates"
+            element={
+              isAuthenticated ? (
+                <SeasonalDates />
               ) : (
                 <Navigate to="/login" replace />
               )

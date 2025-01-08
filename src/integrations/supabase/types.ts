@@ -39,6 +39,30 @@ export type Database = {
         }
         Relationships: []
       }
+      calendarios: {
+        Row: {
+          ano: number
+          created_at: string | null
+          id: number
+          id_user: string | null
+          nome: string
+        }
+        Insert: {
+          ano: number
+          created_at?: string | null
+          id?: never
+          id_user?: string | null
+          nome: string
+        }
+        Update: {
+          ano?: number
+          created_at?: string | null
+          id?: never
+          id_user?: string | null
+          nome?: string
+        }
+        Relationships: []
+      }
       campanhas_marketing: {
         Row: {
           created_at: string | null
@@ -47,6 +71,7 @@ export type Database = {
           data_inicio: string
           descricao: string | null
           id: number
+          id_calendario: number | null
           id_user: string | null
           is_from_commemorative: boolean | null
           nome: string
@@ -60,6 +85,7 @@ export type Database = {
           data_inicio: string
           descricao?: string | null
           id?: number
+          id_calendario?: number | null
           id_user?: string | null
           is_from_commemorative?: boolean | null
           nome: string
@@ -73,13 +99,22 @@ export type Database = {
           data_inicio?: string
           descricao?: string | null
           id?: number
+          id_calendario?: number | null
           id_user?: string | null
           is_from_commemorative?: boolean | null
           nome?: string
           objetivo?: string | null
           oferta?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campanhas_marketing_id_calendario_fkey"
+            columns: ["id_calendario"]
+            isOneToOne: false
+            referencedRelation: "calendarios"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       datas_2025: {
         Row: {
