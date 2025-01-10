@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhaseAction } from "@/types/campaign-phase";
@@ -84,7 +84,7 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
     }
   };
 
-  useState(() => {
+  useEffect(() => {
     fetchActions();
   }, [phaseId]);
 
