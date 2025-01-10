@@ -9,4 +9,5 @@ export interface Campaign {
   id_user?: string;
   created_at?: string;
   is_from_commemorative?: boolean;
+  big_idea: string;
 }
