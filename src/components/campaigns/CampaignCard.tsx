@@ -131,7 +131,7 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
   };
 
   return (
-    <Card className="bg-neutral-light/50 backdrop-blur-sm">
+    <Card className="bg-neutral-light/50 backdrop-blur-sm max-h-[80vh] flex flex-col">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-xl font-bold">{campaign.nome}</CardTitle>
         {showActions && (
@@ -153,8 +153,8 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
           </div>
         )}
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[500px] pr-4">
+      <CardContent className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full pr-4">
           <div className="space-y-4">
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">

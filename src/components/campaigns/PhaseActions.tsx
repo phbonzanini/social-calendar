@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhaseAction } from "@/types/campaign-phase";
@@ -16,7 +16,7 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
   const [newAction, setNewAction] = useState("");
   const { toast } = useToast();
 
-  const fetchActions = async () => {
+  const fetchActions = useCallback(async () => {
     const { data, error } = await supabase
       .from("acoes_fase")
       .select("*")
@@ -29,7 +29,7 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
     }
 
     setActions(data);
-  };
+  }, [phaseId]);
 
   const handleAddAction = async () => {
     if (!newAction.trim()) return;
@@ -47,7 +47,7 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
       });
 
       setNewAction("");
-      fetchActions();
+      await fetchActions();
       onActionAdded();
     } catch (error) {
       console.error("Error adding action:", error);
@@ -73,7 +73,7 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
         description: "A ação foi removida da fase.",
       });
 
-      fetchActions();
+      await fetchActions();
     } catch (error) {
       console.error("Error deleting action:", error);
       toast({
@@ -86,7 +86,7 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
 
   useEffect(() => {
     fetchActions();
-  }, [phaseId, onActionAdded]);
+  }, [fetchActions]);
 
   return (
     <div className="space-y-2">
