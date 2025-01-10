@@ -9,6 +9,41 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      acoes_fase: {
+        Row: {
+          created_at: string | null
+          descricao: string
+          id: number
+          id_fase: number | null
+          responsavel: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          descricao: string
+          id?: number
+          id_fase?: number | null
+          responsavel?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          descricao?: string
+          id?: number
+          id_fase?: number | null
+          responsavel?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acoes_fase_id_fase_fkey"
+            columns: ["id_fase"]
+            isOneToOne: false
+            referencedRelation: "fases_campanha"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cadastros: {
         Row: {
           cargo: string | null
