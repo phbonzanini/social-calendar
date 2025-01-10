@@ -86,7 +86,7 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
 
   useEffect(() => {
     fetchActions();
-  }, [phaseId]);
+  }, [phaseId, onActionAdded]);
 
   return (
     <div className="space-y-2">
