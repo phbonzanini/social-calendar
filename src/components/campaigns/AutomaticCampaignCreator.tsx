@@ -66,7 +66,7 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
               id_user: session.session.user.id,
               is_from_commemorative: true,
               id_calendario: parseInt(calendarId),
-              big_idea: `Campanha comemorativa: ${date.title}` // Default big idea for commemorative dates
+              big_idea: `Campanha comemorativa: ${date.title}`
             };
 
             const { error } = await supabase
@@ -83,7 +83,11 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
           }
         }
 
-        navigate(location.pathname, { replace: true, state: {} });
+        // Clear the state and update the URL without the selectedDates
+        navigate(location.pathname + (calendarId ? `?calendar=${calendarId}` : ''), { 
+          replace: true, 
+          state: {} 
+        });
 
         if (createdCount > 0) {
           toast({

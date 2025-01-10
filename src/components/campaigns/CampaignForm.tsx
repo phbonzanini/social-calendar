@@ -1,11 +1,11 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEffect } from "react";
 
 const formSchema = z.object({
@@ -51,6 +51,9 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
     <DialogContent>
       <DialogHeader>
         <DialogTitle>{isEditing ? "Editar Campanha" : "Nova Campanha"}</DialogTitle>
+        <DialogDescription>
+          Preencha os detalhes da sua campanha. Campos com * são obrigatórios.
+        </DialogDescription>
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -59,10 +62,11 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
             name="nome"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nome da Campanha</FormLabel>
+                <FormLabel>Nome da Campanha *</FormLabel>
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -71,10 +75,11 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
             name="big_idea"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Big Idea (Tese Central)</FormLabel>
+                <FormLabel>Big Idea (Tese Central) *</FormLabel>
                 <FormControl>
                   <Textarea {...field} placeholder="Digite a tese central da campanha" />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -83,10 +88,11 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
             name="data_inicio"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Data de Início</FormLabel>
+                <FormLabel>Data de Início *</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -95,10 +101,11 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
             name="data_fim"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Data de Fim</FormLabel>
+                <FormLabel>Data de Fim *</FormLabel>
                 <FormControl>
                   <Input type="date" {...field} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -111,6 +118,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -123,6 +131,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
                 <FormControl>
                   <Textarea {...field} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -135,6 +144,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
                 <FormControl>
                   <Input {...field} placeholder="Ex: 20% de desconto" />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
