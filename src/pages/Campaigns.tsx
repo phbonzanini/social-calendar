@@ -56,7 +56,6 @@ const Campaigns = () => {
     enabled: !!calendarId,
   });
 
-  // Use the automatic campaign creator hook
   useAutomaticCampaignCreator(refetch);
 
   const onSubmit = async (values: Omit<Campaign, "id">) => {
@@ -75,6 +74,7 @@ const Campaigns = () => {
         oferta: values.oferta || null,
         id_user: session.session.user.id,
         id_calendario: calendarId,
+        big_idea: values.big_idea, // Add the big_idea field
       };
 
       const { error } = await supabase
