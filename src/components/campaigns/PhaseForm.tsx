@@ -71,7 +71,19 @@ export const PhaseForm = ({
   });
 
   const handleSubmit = async (values: FormValues) => {
-    await onSubmit(values);
+    // Ensure dates are in YYYY-MM-DD format without timezone offset
+    const formatDate = (dateString: string) => {
+      const date = new Date(dateString);
+      return date.toISOString().split('T')[0];
+    };
+
+    const formattedValues = {
+      ...values,
+      data_inicio: formatDate(values.data_inicio),
+      data_fim: formatDate(values.data_fim),
+    };
+
+    await onSubmit(formattedValues);
   };
 
   return (

@@ -65,6 +65,7 @@ export type Database = {
       }
       campanhas_marketing: {
         Row: {
+          big_idea: string | null
           created_at: string | null
           data_comemorativa: string | null
           data_fim: string
@@ -79,6 +80,7 @@ export type Database = {
           oferta: string | null
         }
         Insert: {
+          big_idea?: string | null
           created_at?: string | null
           data_comemorativa?: string | null
           data_fim: string
@@ -93,6 +95,7 @@ export type Database = {
           oferta?: string | null
         }
         Update: {
+          big_idea?: string | null
           created_at?: string | null
           data_comemorativa?: string | null
           data_fim?: string

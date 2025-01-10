@@ -15,6 +15,7 @@ const formSchema = z.object({
   objetivo: z.string().optional(),
   descricao: z.string().optional(),
   oferta: z.string().optional(),
+  big_idea: z.string().min(1, "Big Idea é obrigatória"),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -36,6 +37,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
       objetivo: "",
       descricao: "",
       oferta: "",
+      big_idea: "",
     },
   });
 
@@ -60,6 +62,18 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
                 <FormLabel>Nome da Campanha</FormLabel>
                 <FormControl>
                   <Input {...field} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="big_idea"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Big Idea (Tese Central)</FormLabel>
+                <FormControl>
+                  <Textarea {...field} placeholder="Digite a tese central da campanha" />
                 </FormControl>
               </FormItem>
             )}

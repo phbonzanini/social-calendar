@@ -38,17 +38,14 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
         const processedDates = new Set<string>();
 
         for (const date of selectedDates) {
-          // Create a unique key combining date and title
           const uniqueKey = `${date.date}-${date.title}`;
           
-          // Skip if we've already processed this exact date and title combination
           if (processedDates.has(uniqueKey)) {
             console.log(`Skipping duplicate date and title combination: ${uniqueKey}`);
             continue;
           }
           processedDates.add(uniqueKey);
 
-          // Check if a campaign already exists for this date, title and user
           const { data: existingCampaigns } = await supabase
             .from("campanhas_marketing")
             .select("*")
@@ -58,7 +55,6 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
             .eq("id_calendario", parseInt(calendarId))
             .eq("is_from_commemorative", true);
 
-          // Only create if no campaign exists for this date and title
           if (!existingCampaigns || existingCampaigns.length === 0) {
             console.log(`Creating campaign for date: ${date.date} and title: ${date.title}`);
             const campaignData = {
@@ -69,7 +65,8 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
               data_comemorativa: date.date,
               id_user: session.session.user.id,
               is_from_commemorative: true,
-              id_calendario: parseInt(calendarId)
+              id_calendario: parseInt(calendarId),
+              big_idea: `Campanha comemorativa: ${date.title}` // Default big idea for commemorative dates
             };
 
             const { error } = await supabase
@@ -86,7 +83,6 @@ export const useAutomaticCampaignCreator = (refetchCampaigns: () => void) => {
           }
         }
 
-        // Clear the selectedDates from location state
         navigate(location.pathname, { replace: true, state: {} });
 
         if (createdCount > 0) {
