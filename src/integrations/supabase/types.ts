@@ -12,6 +12,8 @@ export type Database = {
       acoes_fase: {
         Row: {
           created_at: string | null
+          data_fim: string
+          data_inicio: string
           descricao: string
           id: number
           id_fase: number | null
@@ -20,6 +22,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
           descricao: string
           id?: number
           id_fase?: number | null
@@ -28,6 +32,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          data_fim?: string
+          data_inicio?: string
           descricao?: string
           id?: number
           id_fase?: number | null

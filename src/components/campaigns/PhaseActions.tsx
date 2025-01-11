@@ -50,7 +50,7 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
       return;
     }
 
-    setActions(data);
+    setActions(data as PhaseAction[]);
   }, [phaseId]);
 
   const handleAddAction = async (values: ActionFormValues) => {
