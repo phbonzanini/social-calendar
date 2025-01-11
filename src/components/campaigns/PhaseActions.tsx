@@ -5,23 +5,45 @@ import { PhaseAction } from "@/types/campaign-phase";
 import { Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { CalendarIcon } from "lucide-react";
 
 interface PhaseActionsProps {
   phaseId: number;
   onActionAdded: () => void;
 }
 
+interface ActionFormValues {
+  descricao: string;
+  data_inicio: Date;
+  data_fim: Date;
+}
+
 export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
   const [actions, setActions] = useState<PhaseAction[]>([]);
-  const [newAction, setNewAction] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+  const form = useForm<ActionFormValues>({
+    defaultValues: {
+      descricao: "",
+      data_inicio: new Date(),
+      data_fim: new Date(),
+    },
+  });
 
   const fetchActions = useCallback(async () => {
     const { data, error } = await supabase
       .from("acoes_fase")
       .select("*")
       .eq("id_fase", phaseId)
-      .order("created_at", { ascending: true });
+      .order("data_inicio", { ascending: true });
 
     if (error) {
       console.error("Error fetching actions:", error);
@@ -31,13 +53,16 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
     setActions(data);
   }, [phaseId]);
 
-  const handleAddAction = async () => {
-    if (!newAction.trim()) return;
-
+  const handleAddAction = async (values: ActionFormValues) => {
     try {
       const { error } = await supabase
         .from("acoes_fase")
-        .insert([{ id_fase: phaseId, descricao: newAction }]);
+        .insert([{
+          id_fase: phaseId,
+          descricao: values.descricao,
+          data_inicio: values.data_inicio.toISOString().split('T')[0],
+          data_fim: values.data_fim.toISOString().split('T')[0],
+        }]);
 
       if (error) throw error;
 
@@ -46,7 +71,8 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
         description: "A ação foi adicionada à fase.",
       });
 
-      setNewAction("");
+      form.reset();
+      setIsDialogOpen(false);
       await fetchActions();
       onActionAdded();
     } catch (error) {
@@ -90,24 +116,138 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
 
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input
-          placeholder="Adicionar nova ação..."
-          value={newAction}
-          onChange={(e) => setNewAction(e.target.value)}
-          onKeyPress={(e) => e.key === "Enter" && handleAddAction()}
-        />
-        <Button size="sm" onClick={handleAddAction}>
-          <Plus className="h-4 w-4" />
-        </Button>
+      <div className="flex justify-between items-center">
+        <h4 className="text-sm font-medium">Ações da Fase</h4>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Nova Ação
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Adicionar Nova Ação</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleAddAction)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="descricao"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrição da Ação</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Descreva a ação a ser realizada" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="data_inicio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Início</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="data_fim"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data de Término</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full pl-3 text-left font-normal",
+                                !field.value && "text-muted-foreground"
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, "dd/MM/yyyy", { locale: ptBR })
+                              ) : (
+                                <span>Selecione uma data</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date < new Date("1900-01-01")
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+                  )}
+                />
+
+                <Button type="submit" className="w-full">
+                  Adicionar Ação
+                </Button>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
-      <div className="space-y-2 max-h-32 overflow-y-auto">
+
+      <div className="space-y-2 max-h-48 overflow-y-auto">
         {actions.map((action) => (
           <div
             key={action.id}
-            className="flex items-center justify-between bg-white p-2 rounded-md"
+            className="flex items-center justify-between bg-white p-3 rounded-md shadow-sm"
           >
-            <span className="text-sm">{action.descricao}</span>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">{action.descricao}</p>
+              <p className="text-xs text-muted-foreground">
+                {format(new Date(action.data_inicio), "dd/MM/yyyy", { locale: ptBR })} -{" "}
+                {format(new Date(action.data_fim), "dd/MM/yyyy", { locale: ptBR })}
+              </p>
+            </div>
             <Button
               variant="ghost"
               size="sm"
@@ -117,6 +257,11 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
             </Button>
           </div>
         ))}
+        {actions.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-4">
+            Nenhuma ação criada ainda.
+          </p>
+        )}
       </div>
     </div>
   );

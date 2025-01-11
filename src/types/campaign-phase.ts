@@ -13,6 +13,8 @@ export interface PhaseAction {
   id: number;
   id_fase: number;
   descricao: string;
+  data_inicio: string;
+  data_fim: string;
   responsavel?: string;
   status?: string;
   created_at?: string;
