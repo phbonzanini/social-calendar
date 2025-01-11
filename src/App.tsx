@@ -3,6 +3,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AppRoutes } from "./AppRoutes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { SidebarProvider } from "./components/ui/sidebar";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -18,7 +19,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AppRoutes />
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full">
+            <AppRoutes />
+          </div>
+        </SidebarProvider>
         <Toaster />
       </BrowserRouter>
     </QueryClientProvider>
