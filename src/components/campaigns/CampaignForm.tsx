@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEffect } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const formSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
@@ -48,111 +49,113 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
   }, [defaultValues, initialData, form]);
 
   return (
-    <DialogContent>
-      <DialogHeader>
+    <DialogContent className="max-h-[85vh] p-0">
+      <DialogHeader className="p-6 pb-0">
         <DialogTitle>{isEditing ? "Editar Campanha" : "Nova Campanha"}</DialogTitle>
         <DialogDescription>
           Preencha os detalhes da sua campanha. Campos com * são obrigatórios.
         </DialogDescription>
       </DialogHeader>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="nome"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome da Campanha *</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="big_idea"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Big Idea (Tese Central) *</FormLabel>
-                <FormControl>
-                  <Textarea {...field} placeholder="Digite a tese central da campanha" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="data_inicio"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Data de Início *</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="data_fim"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Data de Fim *</FormLabel>
-                <FormControl>
-                  <Input type="date" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="objetivo"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Objetivo</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="descricao"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Descrição</FormLabel>
-                <FormControl>
-                  <Textarea {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="oferta"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Oferta</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Ex: 20% de desconto" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button type="submit" className="w-full">
-            {isEditing ? "Salvar Alterações" : "Criar Campanha"}
-          </Button>
-        </form>
-      </Form>
+      <ScrollArea className="px-6 pb-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="nome"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome da Campanha *</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="big_idea"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Big Idea (Tese Central) *</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Digite a tese central da campanha" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="data_inicio"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data de Início *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="data_fim"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data de Fim *</FormLabel>
+                  <FormControl>
+                    <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="objetivo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Objetivo</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="descricao"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="oferta"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Oferta</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Ex: 20% de desconto" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full">
+              {isEditing ? "Salvar Alterações" : "Criar Campanha"}
+            </Button>
+          </form>
+        </Form>
+      </ScrollArea>
     </DialogContent>
   );
 };
