@@ -56,7 +56,7 @@ export const CampaignForm = ({ onSubmit, defaultValues, initialData, isEditing =
           Preencha os detalhes da sua campanha. Campos com * são obrigatórios.
         </DialogDescription>
       </DialogHeader>
-      <ScrollArea className="px-6 pb-6">
+      <ScrollArea className="h-[calc(85vh-120px)] px-6 pb-6">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
