@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhaseAction } from "@/types/campaign-phase";
-import { Plus, Trash2, CalendarIcon } from "lucide-react";
+import { Plus, Trash2, CalendarIcon, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -30,6 +30,7 @@ interface ActionFormValues {
 export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndDate }: PhaseActionsProps) => {
   const [actions, setActions] = useState<PhaseAction[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingAction, setEditingAction] = useState<PhaseAction | null>(null);
   const { toast } = useToast();
   const form = useForm<ActionFormValues>({
     defaultValues: {
@@ -55,7 +56,6 @@ export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndD
   }, [phaseId]);
 
   const handleAddAction = async (values: ActionFormValues) => {
-    // Validar se as datas estão dentro do período da fase
     const phaseStart = new Date(phaseStartDate);
     const phaseEnd = new Date(phaseEndDate);
     const actionStart = values.data_inicio;
@@ -101,6 +101,34 @@ export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndD
     }
   };
 
+  const handleUpdateAction = async (actionId: number, values: Partial<ActionFormValues>) => {
+    try {
+      const { error } = await supabase
+        .from("acoes_fase")
+        .update({
+          data_inicio: values.data_inicio?.toISOString().split('T')[0],
+          data_fim: values.data_fim?.toISOString().split('T')[0],
+        })
+        .eq("id", actionId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Ação atualizada com sucesso!",
+        description: "As datas da ação foram atualizadas.",
+      });
+
+      await fetchActions();
+    } catch (error) {
+      console.error("Error updating action:", error);
+      toast({
+        title: "Erro ao atualizar ação",
+        description: "Não foi possível atualizar a ação. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteAction = async (actionId: number) => {
     try {
       const { error } = await supabase
@@ -141,7 +169,7 @@ export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndD
               Nova Ação
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="bg-white">
             <DialogHeader>
               <DialogTitle>Adicionar Nova Ação</DialogTitle>
             </DialogHeader>
@@ -269,10 +297,55 @@ export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndD
           >
             <div className="space-y-1">
               <p className="text-sm font-medium">{action.descricao}</p>
-              <p className="text-xs text-muted-foreground">
-                {format(new Date(action.data_inicio), "dd/MM/yyyy", { locale: ptBR })} -{" "}
-                {format(new Date(action.data_fim), "dd/MM/yyyy", { locale: ptBR })}
-              </p>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="bg-white">
+                      <CalendarIcon className="h-3 w-3 mr-1" />
+                      {format(new Date(action.data_inicio), "dd/MM/yyyy", { locale: ptBR })}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={new Date(action.data_inicio)}
+                      onSelect={(date) => {
+                        if (date) {
+                          handleUpdateAction(action.id, { data_inicio: date });
+                        }
+                      }}
+                      disabled={(date) =>
+                        date < new Date(phaseStartDate) || date > new Date(phaseEndDate)
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <span className="text-xs text-muted-foreground self-center">até</span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="bg-white">
+                      <CalendarIcon className="h-3 w-3 mr-1" />
+                      {format(new Date(action.data_fim), "dd/MM/yyyy", { locale: ptBR })}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={new Date(action.data_fim)}
+                      onSelect={(date) => {
+                        if (date) {
+                          handleUpdateAction(action.id, { data_fim: date });
+                        }
+                      }}
+                      disabled={(date) =>
+                        date < new Date(phaseStartDate) || date > new Date(phaseEndDate)
+                      }
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <Button
               variant="ghost"
