@@ -172,7 +172,7 @@ export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndD
                             <Button
                               variant="outline"
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "w-full pl-3 text-left font-normal bg-white",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
@@ -214,7 +214,7 @@ export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndD
                             <Button
                               variant="outline"
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "w-full pl-3 text-left font-normal bg-white",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
