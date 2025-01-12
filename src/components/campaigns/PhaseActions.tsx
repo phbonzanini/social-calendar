@@ -189,7 +189,11 @@ export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndD
                           <Calendar
                             mode="single"
                             selected={field.value}
-                            onSelect={field.onChange}
+                            onSelect={(date) => {
+                              if (date) {
+                                field.onChange(date);
+                              }
+                            }}
                             disabled={(date) =>
                               date < new Date(phaseStartDate) || date > new Date(phaseEndDate)
                             }
@@ -231,7 +235,11 @@ export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndD
                           <Calendar
                             mode="single"
                             selected={field.value}
-                            onSelect={field.onChange}
+                            onSelect={(date) => {
+                              if (date) {
+                                field.onChange(date);
+                              }
+                            }}
                             disabled={(date) =>
                               date < new Date(phaseStartDate) || date > new Date(phaseEndDate)
                             }
