@@ -240,7 +240,14 @@ export const CampaignCard = ({ campaign, onEdit, onDelete, showActions = true }:
                             </p>
                           )}
                         </div>
-                        <PhaseActions phaseId={phase.id} onActionAdded={fetchPhases} />
+
+<PhaseActions 
+  phaseId={phase.id} 
+  onActionAdded={fetchPhases} 
+  phaseStartDate={phase.data_inicio}
+  phaseEndDate={phase.data_fim}
+/>
+
                       </div>
                     </CardContent>
                   </Card>

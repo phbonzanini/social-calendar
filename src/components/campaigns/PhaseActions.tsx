@@ -2,22 +2,23 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PhaseAction } from "@/types/campaign-phase";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
 
 interface PhaseActionsProps {
   phaseId: number;
   onActionAdded: () => void;
+  phaseStartDate: string;
+  phaseEndDate: string;
 }
 
 interface ActionFormValues {
@@ -26,15 +27,15 @@ interface ActionFormValues {
   data_fim: Date;
 }
 
-export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
+export const PhaseActions = ({ phaseId, onActionAdded, phaseStartDate, phaseEndDate }: PhaseActionsProps) => {
   const [actions, setActions] = useState<PhaseAction[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<ActionFormValues>({
     defaultValues: {
       descricao: "",
-      data_inicio: new Date(),
-      data_fim: new Date(),
+      data_inicio: new Date(phaseStartDate),
+      data_fim: new Date(phaseEndDate),
     },
   });
 
@@ -54,6 +55,21 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
   }, [phaseId]);
 
   const handleAddAction = async (values: ActionFormValues) => {
+    // Validar se as datas estão dentro do período da fase
+    const phaseStart = new Date(phaseStartDate);
+    const phaseEnd = new Date(phaseEndDate);
+    const actionStart = values.data_inicio;
+    const actionEnd = values.data_fim;
+
+    if (actionStart < phaseStart || actionEnd > phaseEnd) {
+      toast({
+        title: "Erro de validação",
+        description: "As datas da ação devem estar dentro do período da fase.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("acoes_fase")
@@ -175,12 +191,13 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
                             selected={field.value}
                             onSelect={field.onChange}
                             disabled={(date) =>
-                              date < new Date("1900-01-01")
+                              date < new Date(phaseStartDate) || date > new Date(phaseEndDate)
                             }
                             initialFocus
                           />
                         </PopoverContent>
                       </Popover>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -216,12 +233,13 @@ export const PhaseActions = ({ phaseId, onActionAdded }: PhaseActionsProps) => {
                             selected={field.value}
                             onSelect={field.onChange}
                             disabled={(date) =>
-                              date < new Date("1900-01-01")
+                              date < new Date(phaseStartDate) || date > new Date(phaseEndDate)
                             }
                             initialFocus
                           />
                         </PopoverContent>
                       </Popover>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
