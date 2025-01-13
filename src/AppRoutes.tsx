@@ -39,9 +39,18 @@ export const AppRoutes = () => {
       {isAuthenticated && <AppSidebar />}
       <main className="flex-1">
         <Routes>
+          {/* Public routes */}
           <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
+          <Route 
+            path="/login" 
+            element={!isAuthenticated ? <Login /> : <Navigate to="/select-niche" replace />} 
+          />
+          <Route 
+            path="/signup" 
+            element={!isAuthenticated ? <SignUp /> : <Navigate to="/select-niche" replace />} 
+          />
+
+          {/* Protected routes */}
           <Route
             path="/select-niche"
             element={
@@ -92,6 +101,8 @@ export const AppRoutes = () => {
               )
             }
           />
+
+          {/* Catch-all route - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
